@@ -1,0 +1,20 @@
+{
+  "name": "grudge-bowl",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A three-lap race on a road tied in a knot, driven by furious bots with hand-programmed neural brains.",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/build.mjs --serve",
+    "build": "node tools/build.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@fontsource/barlow-condensed": "^5.3.0",
+    "@fontsource/bowlby-one": "^5.3.0",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

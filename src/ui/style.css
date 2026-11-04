@@ -1,0 +1,203 @@
+:root {
+  --fair-red: #c8321f;
+  --mustard: #e8b023;
+  --barn-teal: #1f6b6b;
+  --ply: #c99a5b;
+  --ply-dark: #a97a3e;
+  --soot: #1a1b20;
+  --paint: #f3e2bd;
+  --display: 'Bowlby One', Impact, 'Arial Narrow', sans-serif;
+  --text: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --row: 34px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #d9925a; color: var(--paint); font-family: var(--text); }
+#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; }
+button:focus-visible { outline: 3px solid var(--mustard); outline-offset: 2px; }
+
+/* The Grudge Board: a plywood sign with painted rows and red yarn down its edge. */
+#board {
+  position: fixed; left: 16px; top: 16px;
+  width: 322px;
+  padding: 12px 40px 12px 12px;
+  background:
+    repeating-linear-gradient(92deg, rgba(90,50,10,.07) 0 3px, transparent 3px 11px),
+    repeating-linear-gradient(88deg, rgba(255,230,180,.06) 0 7px, transparent 7px 23px),
+    var(--ply);
+  color: var(--soot);
+  box-shadow: 0 2px 0 var(--ply-dark), 0 10px 26px rgba(40,15,0,.45);
+  transform: rotate(-.4deg);
+}
+#board h1 {
+  margin: 0 0 8px;
+  font: 400 24px/1 var(--display);
+  color: var(--fair-red);
+  letter-spacing: .01em;
+}
+.rows-wrap { position: relative; height: calc(var(--rows, 12) * var(--row)); }
+#board-rows { list-style: none; margin: 0; padding: 0; position: relative; height: 100%; }
+.row {
+  position: absolute; left: 0; right: 0; top: 0; height: var(--row);
+  transition: transform .45s cubic-bezier(.3,.9,.3,1);
+}
+.row-btn {
+  display: grid; grid-template-columns: 30px 1fr 62px 42px; align-items: center; gap: 7px;
+  width: 100%; height: calc(var(--row) - 4px); padding: 0 4px 0 0;
+  text-align: left;
+  color: var(--soot);
+}
+.row.focus .row-btn { background: rgba(26,27,32,.13); }
+.row-btn:hover { background: rgba(26,27,32,.09); }
+.num {
+  display: grid; place-items: center; height: 28px;
+  font: 400 15px/1 var(--display);
+  border: 2px solid var(--soot);
+}
+.name { font-weight: 700; font-size: 18px; line-height: 1; white-space: nowrap; overflow: hidden; }
+.meters { display: grid; gap: 2px; }
+.meters i { display: block; height: 7px; transform-origin: left; transform: scaleX(1); transition: transform .25s; }
+.hp { background: var(--barn-teal); }
+.rage { background: var(--fair-red); }
+.score { font-weight: 700; font-size: 15px; min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; }
+.row.dead .name { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--fair-red); opacity: .6; }
+.row.dead .num { filter: grayscale(1); opacity: .55; }
+.row.dead .score { opacity: .6; }
+#yarn { position: absolute; left: calc(100% + 1px); top: 0; width: 30px; height: 100%; overflow: visible; pointer-events: none; }
+.strand { fill: none; stroke: #b3120c; stroke-width: 2px; stroke-linecap: round; transition: opacity .3s; filter: drop-shadow(1px 1px 0 rgba(60,20,0,.35)); }
+.knot { fill: var(--soot); transition: opacity .3s; }
+
+#race-info {
+  margin-top: 8px; display: flex; justify-content: space-between; align-items: baseline;
+  font-weight: 700; font-size: 17px;
+  border-top: 2px solid rgba(26,27,32,.35);
+  padding-top: 6px;
+}
+#clock { font: 400 22px/1 var(--display); color: var(--fair-red); }
+
+/* The bot on camera, painted across the foot of the picture. */
+#focus {
+  position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%);
+  display: grid; grid-template-columns: auto auto; align-items: end; gap: 0 14px;
+  text-shadow: 0 2px 0 rgba(40,15,0,.55), 0 0 14px rgba(40,15,0,.45);
+  pointer-events: none; text-align: center;
+  min-width: 300px; justify-content: center;
+}
+#focus-name { font: 400 clamp(26px, 3.6vw, 44px)/1 var(--display); color: var(--paint); grid-column: 1 / -1; }
+#focus-mode { grid-column: 1 / -1; font-weight: 700; font-size: 21px; color: var(--mustard); min-height: 25px; }
+#focus-speed { font: 400 24px/1 var(--display); white-space: nowrap; }
+.focus-right { display: grid; gap: 3px; width: 190px; text-align: left; align-self: center; }
+.focus-track { height: 9px; background: rgba(26,27,32,.55); }
+#focus-hp { display: block; height: 100%; width: 100%; background: var(--barn-teal); transform-origin: left; transition: transform .25s; }
+#focus-cold { font-weight: 700; font-size: 17px; color: #ffb09e; min-height: 20px; }
+
+#feed {
+  position: fixed; right: 16px; top: 16px; width: min(360px, 44vw);
+  list-style: none; margin: 0; padding: 0;
+  display: grid; gap: 5px; justify-items: end;
+  pointer-events: none;
+}
+#feed li {
+  padding: 3px 10px 4px; background: var(--soot); color: var(--paint);
+  font-weight: 700; font-size: 18px; text-align: right;
+  transition: opacity .7s;
+}
+#feed li.ko { background: var(--fair-red); }
+#feed li.hit { background: var(--mustard); color: var(--soot); }
+#feed li.taunt { background: var(--paint); color: var(--soot); }
+#feed li.gone { opacity: 0; }
+
+#announce {
+  position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none;
+  font: 400 min(30vh, 26vw)/1 var(--display); color: var(--mustard);
+  text-shadow: 0 8px 0 var(--fair-red), 0 12px 40px rgba(40,15,0,.5);
+  opacity: 0;
+}
+#announce.show { animation: stamp .9s ease-out both; }
+@keyframes stamp {
+  0% { opacity: 0; transform: scale(1.7); }
+  18% { opacity: 1; transform: scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+#controls {
+  position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+  width: max-content; max-width: calc(100vw - 32px);
+  display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; align-items: center;
+  font-weight: 700; font-size: 17px;
+}
+.group { display: flex; flex-wrap: wrap; justify-content: center; max-width: 100%; gap: 2px; background: rgba(26,27,32,.62); padding: 2px; }
+.group button, .source-link { padding: 3px 10px; color: var(--paint); }
+.source-link { text-decoration: none; }
+.group button:hover, .source-link:hover { background: rgba(243,226,189,.16); }
+.group button[aria-pressed='true'] { background: var(--mustard); color: var(--soot); }
+
+/* Title and finish cards: a fair poster, nailed up over the picture. */
+.poster {
+  position: fixed; inset: 0; display: grid; place-items: center; padding: 16px;
+  background: rgba(70,25,10,.3);
+  overflow: auto;
+}
+.poster[hidden] { display: none; }
+.sheet {
+  width: min(640px, 100%);
+  background: var(--paint); color: var(--soot);
+  padding: clamp(20px, 4vw, 36px);
+  box-shadow: 0 16px 50px rgba(40,15,0,.55);
+  transform: rotate(-1deg);
+  border: 8px solid var(--fair-red);
+  outline: 3px solid var(--soot); outline-offset: -14px;
+}
+.sheet h2 { margin: 0; font: 400 clamp(44px, 10vw, 86px)/.94 var(--display); color: var(--fair-red); }
+.sheet .when { margin: 10px 0 0; font: 400 clamp(17px, 3vw, 23px)/1.1 var(--display); color: var(--barn-teal); }
+.sheet p { font-size: 21px; line-height: 1.25; margin: 14px 0 0; max-width: 34em; }
+.sheet .big-btn {
+  margin-top: 20px; padding: 10px 26px;
+  background: var(--soot); color: var(--mustard);
+  font: 400 26px/1 var(--display);
+}
+.sheet .big-btn:hover { background: var(--fair-red); color: var(--paint); }
+.keys { font-size: 18px; margin-top: 14px; color: #55493a; }
+.repo-link { display: inline-block; margin-top: 10px; font-size: 18px; font-weight: 700; color: var(--fair-red); }
+.repo-link:hover { color: #1a1b20; }
+#finish-list { list-style: none; padding: 0; margin: 14px 0 0; columns: 2; column-gap: 22px; font-size: 19px; font-weight: 700; }
+#finish-list li { display: flex; justify-content: space-between; break-inside: avoid; border-bottom: 2px solid rgba(26,27,32,.2); padding: 2px 0; }
+
+@media (max-width: 760px), (max-height: 640px) {
+  :root { --row: 20px; }
+  #board { width: 222px; padding: 8px 30px 8px 8px; left: 8px; top: 8px; }
+  #board h1 { font-size: 16px; margin-bottom: 5px; }
+  .row-btn { grid-template-columns: 20px 1fr 34px; gap: 5px; height: 18px; }
+  .num { height: 16px; font-size: 10px; border-width: 1px; }
+  .name { font-size: 13px; }
+  .score { display: none; }
+  #race-info { font-size: 13px; margin-top: 4px; padding-top: 3px; }
+  #clock { font-size: 15px; }
+}
+
+@media (max-height: 640px) and (min-width: 761px) {
+  #focus { left: calc(50% + 120px); }
+  #focus-name { font-size: 24px; }
+  .sheet h2 { font-size: 44px; }
+  .sheet p { font-size: 17px; margin-top: 8px; }
+  .sheet .big-btn { margin-top: 10px; font-size: 20px; }
+}
+
+@media (max-width: 760px) {
+  #feed { top: auto; bottom: 150px; right: 8px; }
+  #feed li { font-size: 15px; }
+  #focus-name { font-size: 22px; }
+  #focus-mode { font-size: 16px; min-height: 19px; }
+  #focus-speed { font-size: 18px; }
+  .focus-right { width: 130px; }
+  #controls { gap: 6px; font-size: 15px; }
+  .group button, .source-link { padding: 3px 7px; }
+  #focus { bottom: 112px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #announce.show { animation-duration: .01s; opacity: 1; }
+  .row { transition: none; }
+}

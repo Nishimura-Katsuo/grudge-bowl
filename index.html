@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grudge Bowl</title>
+<link rel="stylesheet" href="bundle.css">
+</head>
+<body>
+<canvas id="view" aria-label="Live view of the derby"></canvas>
+
+<aside id="board" inert>
+  <h1>The Grudge Board</h1>
+  <div class="rows-wrap">
+    <ol id="board-rows"></ol>
+    <svg id="yarn" aria-hidden="true"></svg>
+  </div>
+  <div id="race-info">
+    <span id="lap"></span>
+    <span id="alive"></span>
+    <span id="clock"></span>
+  </div>
+</aside>
+
+<ul id="feed" aria-live="polite"></ul>
+
+<div id="focus">
+  <div id="focus-name"></div>
+  <div id="focus-mode"></div>
+  <div id="focus-speed"></div>
+  <div class="focus-right">
+    <div class="focus-track"><i id="focus-hp"></i></div>
+    <div id="focus-cold"></div>
+  </div>
+</div>
+
+<div id="controls" inert>
+  <div class="group" role="group" aria-label="Camera">
+    <button type="button" data-shot="" aria-pressed="true">Director</button>
+    <button type="button" data-shot="chase" aria-pressed="false">Chase</button>
+    <button type="button" data-shot="bumper" aria-pressed="false">Grille</button>
+    <button type="button" data-shot="trackside" aria-pressed="false">Trackside</button>
+    <button type="button" data-shot="drone" aria-pressed="false">Drone</button>
+    <button type="button" data-shot="tower" aria-pressed="false">Tower</button>
+    <button type="button" data-shot="heli" aria-pressed="false">Heli</button>
+  </div>
+  <div class="group" role="group" aria-label="Race speed">
+    <button type="button" data-speed="0.5" aria-pressed="false">Half</button>
+    <button type="button" data-speed="1" aria-pressed="true">Normal</button>
+    <button type="button" data-speed="2" aria-pressed="false">Double</button>
+  </div>
+  <div class="group">
+    <button type="button" id="pause-btn">Pause</button>
+    <button type="button" id="mute-btn">Mute</button>
+    <a class="source-link" href="https://github.com/Nishimura-Katsuo/grudge-bowl" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</div>
+
+<div id="announce" aria-hidden="true"></div>
+
+<section id="title" class="poster">
+  <div class="sheet">
+    <h2>Grudge Bowl</h2>
+    <p class="when">Twelve bots. One road, tied in a knot.</p>
+    <p>Sit back and watch. Three laps, three blind crossroads, three jumps that come down in the wrong place. First car home takes the Bowl, and every bot keeps a list of who hit it on the way there.</p>
+    <button type="button" class="big-btn" id="start-btn">Start the race</button>
+    <p class="keys">Click a name on the board to follow that bot. Keys 1 to 6 pick a camera, A hands it back to the director, Space pauses.</p>
+    <a class="repo-link" href="https://github.com/Nishimura-Katsuo/grudge-bowl" target="_blank" rel="noopener">Source on GitHub</a>
+  </div>
+</section>
+
+<section id="finish" class="poster" hidden>
+  <div class="sheet">
+    <h2 id="finish-name"></h2>
+    <p class="when">Takes the Bowl</p>
+    <p id="finish-note"></p>
+    <ol id="finish-list"></ol>
+    <button type="button" class="big-btn" id="again-btn">Run it back</button>
+    <a class="repo-link" href="https://github.com/Nishimura-Katsuo/grudge-bowl" target="_blank" rel="noopener">Source on GitHub</a>
+  </div>
+</section>
+
+<script src="bundle.js"></script>
+</body>
+</html>
