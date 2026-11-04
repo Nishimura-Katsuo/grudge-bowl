@@ -6,6 +6,9 @@ import { START_LINE_S, SURFACE } from '../sim/config.js';
 import { createRng } from '../sim/math.js';
 
 const SUN_DIR = new THREE.Vector3(-0.62, 0.3, 0.72).normalize();
+const FENCE_FOOT = 1.1; // top of the barrier
+const FENCE_TOP = 4.6;
+const FENCE_MESH = 0.9; // metres per diamond
 
 // Runs of stands as [crossroads pass, metres past it], outside the three loops.
 const STAND_SPANS = [
@@ -23,6 +26,7 @@ export function buildStage(scene, track) {
   scene.add(buildDistantHills(rng));
   scene.add(buildTerrain(track));
   scene.add(buildBarriers(track));
+  scene.add(buildCatchFence(track));
   scene.add(buildGrandstands(track, rng));
   scene.add(buildInfield(track, rng));
   scene.add(buildJumpGantries(track));
@@ -392,6 +396,54 @@ function buildBarriers(track) {
 
 // Stands follow the road, on the outside of the long corners. Each tier is a
 // strip offset from the centreline, stopping wherever it would reach another road.
+// Wire lattice for the catch fence, one diamond per tile.
+function paintFence() {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = '#d8d2c2';
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(128, 128);
+  ctx.moveTo(128, 0); ctx.lineTo(0, 128);
+  ctx.stroke();
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+// The sim's walls have no top: a car in the air still stops at the barrier line.
+// This fence is what it hits, so that isn't an invisible wall.
+function buildCatchFence(track) {
+  const positions = [], uvs = [], indices = [];
+  for (const poly of track.polys) {
+    const start = positions.length / 3;
+    let length = 0;
+    const n = poly.length;
+    for (let i = 0; i <= n; i++) {
+      const p = poly[i % n];
+      if (i > 0) length += Math.hypot(p[0] - poly[i - 1][0], p[1] - poly[i - 1][1]);
+      const h = track.heightAt(p[0], p[1]);
+      positions.push(p[0], h + FENCE_FOOT, p[1], p[0], h + FENCE_TOP, p[1]);
+      uvs.push(length / FENCE_MESH, 0, length / FENCE_MESH, (FENCE_TOP - FENCE_FOOT) / FENCE_MESH);
+    }
+    for (let i = 0; i < n; i++) {
+      const a = start + i * 2;
+      indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setIndex(indices);
+  const mat = new THREE.MeshBasicMaterial({
+    map: paintFence(), transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false, alphaTest: 0.02,
+  });
+  return new THREE.Mesh(geo, mat);
+}
+
 function buildGrandstands(track, rng) {
   const group = new THREE.Group();
   const tiers = 8;

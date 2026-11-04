@@ -85,6 +85,15 @@ class ParticlePool {
     this.tint[i * 4] = r; this.tint[i * 4 + 1] = g; this.tint[i * 4 + 2] = b; this.tint[i * 4 + 3] = a;
   }
 
+  reset() {
+    this.alive.fill(0);
+    this.size.fill(0);
+    this.tint.fill(0);
+    this.cursor = 0;
+    this.geo.attributes.size.needsUpdate = true;
+    this.geo.attributes.tint.needsUpdate = true;
+  }
+
   update(dt) {
     const { pos, vel, size, tint, alive, life, grow, drag, gravity, baseA } = this;
     for (let i = 0; i < this.capacity; i++) {
@@ -144,6 +153,15 @@ class Sparks {
     this.t[i] = life;
   }
 
+  reset() {
+    this.t.fill(0);
+    this.lines.fill(0);
+    this.colours.fill(0);
+    this.cursor = 0;
+    this.geo.attributes.position.needsUpdate = true;
+    this.geo.attributes.color.needsUpdate = true;
+  }
+
   update(dt) {
     const { p, v, t, lines, colours } = this;
     for (let i = 0; i < this.capacity; i++) {
@@ -201,6 +219,16 @@ class Debris {
     this.tmpE = new THREE.Euler();
     this.colour = new THREE.Color();
     scene.add(this.mesh);
+  }
+
+  reset() {
+    const hidden = new THREE.Matrix4().makeScale(0, 0, 0);
+    this.parts.forEach((part, i) => {
+      part.active = false;
+      this.mesh.setMatrixAt(i, hidden);
+    });
+    this.cursor = 0;
+    this.mesh.instanceMatrix.needsUpdate = true;
   }
 
   spawn(x, y, z, vx, vy, vz, sx, sy, sz, colour) {
@@ -317,6 +345,15 @@ class SkidMarks {
     this.last.delete(key);
   }
 
+  reset() {
+    this.pos.fill(0);
+    this.alpha.fill(0);
+    this.last.clear();
+    this.cursor = 0;
+    this.dirty = true;
+    this.flush();
+  }
+
   flush() {
     if (!this.dirty) return;
     this.dirty = false;
@@ -345,6 +382,13 @@ class FlashLights {
     f.duration = duration;
   }
 
+  reset() {
+    for (const f of this.lights) {
+      f.t = 0;
+      f.light.intensity = 0;
+    }
+  }
+
   update(dt) {
     for (const f of this.lights) {
       if (f.t <= 0) { f.light.intensity = 0; continue; }
@@ -366,6 +410,12 @@ export class Effects {
     this.flash = new FlashLights(scene, 3);
     this.renderer = renderer;
     this.emitAccum = new Map();
+  }
+
+  // A new race starts on a clean track.
+  reset() {
+    for (const part of [this.soft, this.glow, this.sparks, this.debris, this.skids, this.flash]) part.reset();
+    this.emitAccum.clear();
   }
 
   setViewport(height, fov) {

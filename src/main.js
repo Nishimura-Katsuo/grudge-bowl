@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 
@@ -31,8 +32,30 @@ renderer.toneMappingExposure = 0.95;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(50, 1, 0.3, 2000);
 
+// Bloom blurs its input, so one bad pixel becomes a whole bad frame. Stop any
+// NaN or infinity here, and keep the picture fully opaque.
+const FiniteColour = {
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = vec4(position.xy, 0.0, 1.0);
+    }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    varying vec2 vUv;
+    void main() {
+      vec3 c = texture2D(tDiffuse, vUv).rgb;
+      float sum = c.r + c.g + c.b;
+      if (isnan(sum) || isinf(sum)) c = vec3(0.0);
+      gl_FragColor = vec4(c, 1.0);
+    }`,
+};
+
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new ShaderPass(FiniteColour));
 const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.34, 0.65, 0.88);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
@@ -126,6 +149,7 @@ function clearVisuals() {
 function newRace() {
   clearTimeout(state.finishTimer);
   clearVisuals();
+  effects.reset();
   setPaused(false);
   state.seed = (Math.random() * 1e9) | 0;
   state.brains = [];

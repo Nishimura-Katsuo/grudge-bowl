@@ -44,7 +44,32 @@ function sectionRing(st) {
   ];
 }
 
-function buildShell(carColour, id) {
+function triangleArea(a, b, c) {
+  const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+  const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+  return 0.5 * Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
+}
+
+// The X part of a triangle's facing direction.
+function facingX(a, b, c) {
+  return (b[1] - a[1]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[1] - a[1]);
+}
+
+// A collapsed triangle has no normal. Left at zero, the shader normalises it into
+// a NaN pixel, bloom spreads that over the frame, and the canvas goes see-through.
+// Crumpling can collapse triangles, so every recompute goes through here.
+function computeSafeNormals(geometry) {
+  geometry.computeVertexNormals();
+  const n = geometry.attributes.normal.array;
+  for (let i = 0; i < n.length; i += 3) {
+    if (n[i] * n[i] + n[i + 1] * n[i + 1] + n[i + 2] * n[i + 2] < 0.5) {
+      n[i] = 0; n[i + 1] = 1; n[i + 2] = 0;
+    }
+  }
+  geometry.attributes.normal.needsUpdate = true;
+}
+
+export function buildShell(carColour, id) {
   const rng = createRng(1009 + id * 31);
   const paint = new THREE.Color(carColour);
   const primer = new THREE.Color(0x7d7f7c);
@@ -56,6 +81,7 @@ function buildShell(carColour, id) {
   const pos = [];
   const col = [];
   const pushTri = (a, b, c, color) => {
+    if (triangleArea(a, b, c) < 1e-6) return;
     pos.push(...a, ...b, ...c);
     for (let i = 0; i < 3; i++) col.push(color.r, color.g, color.b);
   };
@@ -94,19 +120,20 @@ function buildShell(carColour, id) {
 
   // Caps on the nose and the tail.
   const capColour = new THREE.Color(0x18181a);
-  for (const [ring, flip] of [[sections[0], true], [sections[sections.length - 1], false]]) {
-    for (let b = 0; b < ring.length - 1; b++) {
-      const a = ring[b], c = ring[b + 1];
-      const am = mirror(a), cm = mirror(c);
-      if (flip) quad(a, cm, am, c, capColour);
-      else quad(a, c, am, cm, capColour);
+  for (const [ring, outward] of [[sections[0], -1], [sections[sections.length - 1], 1]]) {
+    const edge = [...ring, ...ring.slice().reverse().map(mirror)];
+    const hub = [ring[0][0], ring.reduce((sum, p) => sum + p[1], 0) / ring.length, 0];
+    for (let i = 0; i < edge.length - 1; i++) {
+      const a = edge[i], b = edge[i + 1];
+      if (facingX(hub, a, b) * outward > 0) pushTri(hub, a, b, capColour);
+      else pushTri(hub, b, a, capColour);
     }
   }
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-  geo.computeVertexNormals();
+  computeSafeNormals(geo);
   return geo;
 }
 
@@ -280,7 +307,7 @@ export function crumple(visual, worldPoint, worldNormal, strength) {
   }
   pos.needsUpdate = true;
   col.needsUpdate = true;
-  visual.geometry.computeVertexNormals();
+  computeSafeNormals(visual.geometry);
 }
 
 const qSim = new THREE.Quaternion();
