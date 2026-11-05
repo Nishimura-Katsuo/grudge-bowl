@@ -22,6 +22,7 @@ export function createRuntime(net) {
             case 3: z *= z; break;
             case 4: z = Math.atan(z); break;
             case 5: z = 1 / z; break;
+            case 6: z = Math.sqrt(z); break;
           }
           values[id] = z;
         }

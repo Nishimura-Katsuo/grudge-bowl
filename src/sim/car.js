@@ -5,7 +5,7 @@
 //
 // Body frame: +X forward, +Y up, +Z right.
 
-import { CAR, DAMAGE, TIRE, ENGINE, GRAVITY, START_LINE_S, SURFACE_PROPS } from './config.js';
+import { CAR, DAMAGE, TIRE, ENGINE, GRAVITY, FINISH_LINE_S, SURFACE_PROPS } from './config.js';
 import { clamp, quatToMatrix } from './math.js';
 
 const WHEEL_LAYOUT = [
@@ -22,6 +22,7 @@ const omegaOut = [0, 0, 0];
 // Below this contact speed a tyre behaves as a bristle anchored to the ground, so
 // it holds a position up to the friction limit instead of creeping downhill.
 const STICK_BAND = 0.4;
+const BURNOUT_REAR_GRIP = 0.82;
 const BRISTLE_STIFFNESS = 60000;
 const BRISTLE_DAMPING = 6000;
 const BRISTLE_RELAXATION = 0.3; // metres of rolling to forget a lateral wind-up
@@ -88,7 +89,7 @@ export function createCar(id, roster, spawn, track) {
     lapsAnnounced: 0,
     finishFraction: Infinity,
     trackS: spawn.s,
-    progress: signedLap(spawn.s - START_LINE_S, track.length),
+    progress: signedLap(spawn.s - FINISH_LINE_S, track.length),
     lastProgressS: spawn.s,
     finishPos: 0,
     koReason: null,
@@ -97,10 +98,18 @@ export function createCar(id, roster, spawn, track) {
     lastHitter: -1,
     lastHitterTime: -999,
     flippedTime: 0,
-    stallMark: signedLap(spawn.s - START_LINE_S, track.length),
+    stallMark: signedLap(spawn.s - FINISH_LINE_S, track.length),
     stallTime: 0,
     airTime: 0,
     prevVy: 0,
+    burningOut: false,
+    weapon: 0,
+    fireLock: 0,
+    whirl: null,
+    gripScale: 1,
+    onOil: false,
+    boxedTime: 0,
+    backingUntil: 0,
     airborne: false,
     towed: false,
     racePos: 0,
@@ -296,7 +305,8 @@ export function stepCarForces(car, track, dt) {
     const relLoad = load / TIRE.loadReference;
     const loadGrip = 1 - TIRE.loadSensitivity * (relLoad - 1);
     const axleGrip = w.front ? TIRE.frontGrip : TIRE.rearGrip;
-    const mu = surface.grip * axleGrip * clamp(loadGrip, 0.6, 1.15) * (flat ? 0.5 : 1);
+    const burnout = car.burningOut && !w.front ? BURNOUT_REAR_GRIP : 1;
+    const mu = surface.grip * axleGrip * clamp(loadGrip, 0.6, 1.15) * (flat ? 0.5 : 1) * burnout * car.gripScale;
 
     const slipRatio = (w.omega * radius - vLong) / denom;
     const slipTan = vLat / denom;
@@ -347,9 +357,10 @@ export function stepCarForces(car, track, dt) {
     const Fy = ny * load + wfy * (longF + roll) + wry * latF;
     const Fz = nz * load + wfz * (longF + roll) + wrz * latF;
     fx += Fx; fy += Fy; fz += Fz;
-    tx += ry * Fz - rz * Fy;
+    const lever = ry * TIRE.forceLever;
+    tx += lever * Fz - rz * Fy;
     ty += rz * Fx - rx * Fz;
-    tz += rx * Fy - ry * Fx;
+    tz += rx * Fy - lever * Fx;
   }
 
   const speed = Math.sqrt(car.vx * car.vx + car.vy * car.vy + car.vz * car.vz);

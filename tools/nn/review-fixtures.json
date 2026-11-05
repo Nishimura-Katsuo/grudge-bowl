@@ -1,0 +1,116 @@
+[
+  {
+    "name": "Urgent obstruction during settling",
+    "before": {
+      "recoveryAllowed": 0,
+      "escapeActive": 0,
+      "hazardLinePosition": 0,
+      "hazardAvoid": 0,
+      "rocketOpportunity": 0,
+      "fire": 0
+    },
+    "after": {
+      "recoveryAllowed": 1,
+      "escapeActive": 1,
+      "hazardLinePosition": 0,
+      "hazardAvoid": 0,
+      "rocketOpportunity": 0,
+      "fire": 0
+    }
+  },
+  {
+    "name": "Centred road hazard with nose fifteen degrees right",
+    "before": {
+      "recoveryAllowed": 1,
+      "escapeActive": 0,
+      "hazardLinePosition": -10.35276174545288,
+      "hazardAvoid": 0,
+      "rocketOpportunity": 0,
+      "fire": 0
+    },
+    "after": {
+      "recoveryAllowed": 1,
+      "escapeActive": 0,
+      "hazardLinePosition": -3.08536343140986e-7,
+      "hazardAvoid": 1,
+      "rocketOpportunity": 0,
+      "fire": 0
+    }
+  },
+  {
+    "name": "Rocket misses three metres sideways",
+    "before": {
+      "recoveryAllowed": 1,
+      "escapeActive": 0,
+      "hazardLinePosition": 0,
+      "hazardAvoid": 0,
+      "rocketOpportunity": 1,
+      "fire": 1
+    },
+    "after": {
+      "recoveryAllowed": 1,
+      "escapeActive": 0,
+      "hazardLinePosition": 0,
+      "hazardAvoid": 0,
+      "rocketOpportunity": 0,
+      "fire": 0
+    }
+  },
+  {
+    "name": "Rocket crosses fast lateral traffic",
+    "before": {
+      "recoveryAllowed": 1,
+      "escapeActive": 0,
+      "hazardLinePosition": 0,
+      "hazardAvoid": 0,
+      "rocketOpportunity": 1,
+      "fire": 1
+    },
+    "after": {
+      "recoveryAllowed": 1,
+      "escapeActive": 0,
+      "hazardLinePosition": 0,
+      "hazardAvoid": 0,
+      "rocketOpportunity": 0,
+      "fire": 0
+    }
+  },
+  {
+    "name": "Targetless soft deadline",
+    "before": {
+      "recoveryAllowed": 1,
+      "escapeActive": 0,
+      "hazardLinePosition": 0,
+      "hazardAvoid": 0,
+      "rocketOpportunity": 0,
+      "fire": 1
+    },
+    "after": {
+      "recoveryAllowed": 1,
+      "escapeActive": 0,
+      "hazardLinePosition": 0,
+      "hazardAvoid": 0,
+      "rocketOpportunity": 0,
+      "fire": 0
+    }
+  },
+  {
+    "name": "Airborne hard expiry",
+    "before": {
+      "recoveryAllowed": 0,
+      "escapeActive": 0,
+      "hazardLinePosition": 0,
+      "hazardAvoid": 0,
+      "rocketOpportunity": 0,
+      "fire": 1
+    },
+    "after": {
+      "recoveryAllowed": 0,
+      "escapeActive": 0,
+      "hazardLinePosition": 0,
+      "hazardAvoid": 0,
+      "rocketOpportunity": 0,
+      "fire": 0
+    }
+  }
+]

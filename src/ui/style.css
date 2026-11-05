@@ -90,6 +90,7 @@ button:focus-visible { outline: 3px solid var(--mustard); outline-offset: 2px; }
 .focus-right { display: grid; gap: 3px; width: 190px; text-align: left; align-self: center; }
 .focus-track { height: 9px; background: rgba(26,27,32,.55); }
 #focus-hp { display: block; height: 100%; width: 100%; background: var(--barn-teal); transform-origin: left; transition: transform .25s; }
+#focus-weapon { font: 400 15px/1.1 var(--display); color: var(--mustard); min-height: 17px; text-shadow: 0 2px 0 var(--soot); }
 #focus-cold { font-weight: 700; font-size: 17px; color: #ffb09e; min-height: 20px; }
 
 #feed {
@@ -162,8 +163,49 @@ button:focus-visible { outline: 3px solid var(--mustard); outline-offset: 2px; }
 .keys { font-size: 18px; margin-top: 14px; color: #55493a; }
 .repo-link { display: inline-block; margin-top: 10px; font-size: 18px; font-weight: 700; color: var(--fair-red); }
 .repo-link:hover { color: #1a1b20; }
-#finish-list { list-style: none; padding: 0; margin: 14px 0 0; columns: 2; column-gap: 22px; font-size: 19px; font-weight: 700; }
-#finish-list li { display: flex; justify-content: space-between; break-inside: avoid; border-bottom: 2px solid rgba(26,27,32,.2); padding: 2px 0; }
+
+/* The winner's scene. Nothing here stops the show: only links take the pointer. */
+#board, #feed, #focus { transition: opacity .5s; }
+body.scene #board, body.scene #feed, body.scene #focus { opacity: 0; visibility: hidden; transition: opacity .5s, visibility 0s .5s; }
+#finish {
+  position: fixed; inset: 0; pointer-events: none;
+  padding: 18px 18px 62px;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 350px); gap: 18px; align-items: end;
+}
+#finish[hidden] { display: none; }
+#finish a { pointer-events: auto; }
+.podium { align-self: end; max-width: 620px; animation: arrive .6s ease-out both; }
+.podium .when { margin: 0; font: 400 clamp(17px, 2.4vw, 24px)/1 var(--display); color: var(--mustard); text-shadow: 0 2px 0 var(--soot); }
+#finish-name {
+  margin: 4px 0 0; font: 400 clamp(38px, 7vw, 76px)/.95 var(--display); color: var(--paint);
+  text-shadow: 0 3px 0 var(--soot), 0 0 26px rgba(26,27,32,.5);
+  border-left: 12px solid var(--car, var(--fair-red)); padding-left: 14px;
+}
+#finish-quip {
+  position: relative; margin: 16px 0 0; padding: 14px 18px;
+  background: var(--paint); color: var(--soot); border: 4px solid var(--soot);
+  font-size: clamp(20px, 2.6vw, 28px); font-weight: 700; line-height: 1.18;
+  transform: rotate(-.7deg); box-shadow: 0 8px 24px rgba(40,15,0,.45);
+}
+#finish-quip::before {
+  content: ''; position: absolute; left: 30px; top: -18px; width: 0; height: 0;
+  border: 9px solid transparent; border-bottom-color: var(--soot);
+}
+#finish-note { margin: 10px 0 0; font-size: 19px; font-weight: 700; color: var(--paint); text-shadow: 0 2px 4px var(--soot); }
+.results {
+  align-self: start; padding: 14px 16px; background: var(--paint); color: var(--soot);
+  border: 5px solid var(--fair-red); outline: 2px solid var(--soot); outline-offset: -9px;
+  box-shadow: 0 12px 34px rgba(40,15,0,.5); transform: rotate(.6deg);
+  animation: arrive .6s .15s ease-out both;
+}
+.results h3 { margin: 0; font: 400 26px/1 var(--display); color: var(--fair-red); }
+#finish-list { list-style: none; padding: 0; margin: 8px 0 0; font-size: 18px; font-weight: 700; }
+#finish-list li { display: flex; justify-content: space-between; gap: 12px; border-bottom: 2px solid rgba(26,27,32,.2); padding: 1px 0; }
+#finish-list li:first-child { color: var(--fair-red); }
+#finish-list li.out { color: #6d6253; font-weight: 500; }
+#next-race { margin: 8px 0 0; font: 400 19px/1 var(--display); color: var(--barn-teal); font-variant-numeric: tabular-nums; }
+.results .repo-link { margin-top: 4px; font-size: 15px; }
+@keyframes arrive { from { opacity: 0; transform: translateY(14px); } }
 
 @media (max-width: 760px), (max-height: 640px) {
   :root { --row: 20px; }
@@ -173,6 +215,17 @@ button:focus-visible { outline: 3px solid var(--mustard); outline-offset: 2px; }
   .num { height: 16px; font-size: 10px; border-width: 1px; }
   .name { font-size: 13px; }
   .score { display: none; }
+  /* No room for the control bar as well: it comes back with the next race. */
+  body.scene #controls { display: none; }
+  #finish { padding: 8px; gap: 8px; grid-template-columns: minmax(0, 1fr) minmax(190px, 240px); }
+  .results { padding: 8px 10px; align-self: end; }
+  .results h3 { font-size: 17px; }
+  #finish-list { font-size: 13px; margin-top: 3px; }
+  #next-race { font-size: 14px; margin-top: 4px; }
+  .results .repo-link { display: none; }
+  #finish-name { font-size: clamp(28px, 6vw, 44px); border-left-width: 8px; padding-left: 10px; }
+  #finish-note { font-size: 15px; margin-top: 6px; }
+  #finish-quip { margin-top: 12px; padding: 8px 12px; border-width: 3px; font-size: clamp(17px, 2.6vw, 22px); }
   #race-info { font-size: 13px; margin-top: 4px; padding-top: 3px; }
   #clock { font-size: 15px; }
 }
@@ -197,7 +250,17 @@ button:focus-visible { outline: 3px solid var(--mustard); outline-offset: 2px; }
   #focus { bottom: 112px; }
 }
 
+@media (max-width: 560px) {
+  #finish { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); align-items: stretch; }
+  .results { grid-row: 1; align-self: start; }
+  #finish-list { columns: 2; column-gap: 12px; font-size: 11px; }
+  #finish-list li { break-inside: avoid; gap: 4px; }
+  #finish-list li span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .podium { grid-row: 2; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   #announce.show { animation-duration: .01s; opacity: 1; }
   .row { transition: none; }
+  .podium, .results { animation: none; }
 }

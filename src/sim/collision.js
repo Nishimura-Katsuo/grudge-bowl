@@ -72,10 +72,9 @@ const vB = [0, 0, 0];
 
 // Solves one contact against a moving partner (b) or the static world (b = null).
 // The normal points toward car a. Returns the normal impulse magnitude applied.
-function solveContact(a, b, px, py, pz, nx, ny, nz, restitution, friction, firstPass) {
-  // Between cars the blow arrives through the sills and bumpers, low on the body,
-  // not at the contact point of two rigid boxes, so it barely levers them over.
-  const lever = b ? CONTACT.carContactLever : 1;
+function solveContact(a, b, px, py, pz, nx, ny, nz, restitution, friction, firstPass, lever = 1) {
+  // Against a car or a wall the blow arrives through the sills and bumpers, low on
+  // the body, not at a corner of a rigid box, so it barely levers the car over.
   const rax = px - a.px, ray = (py - a.py) * lever, raz = pz - a.pz;
   pointVelocity(a, rax, ray, raz, vA);
   let relX = vA[0], relY = vA[1], relZ = vA[2];
@@ -235,7 +234,7 @@ export function collideCars(a, b, onHit) {
       jTotal += solveContact(
         a, b,
         contactPts[i * 4], contactPts[i * 4 + 1], contactPts[i * 4 + 2],
-        nx, ny, nz, CONTACT.carRestitution, CONTACT.carFriction, iter === 0,
+        nx, ny, nz, CONTACT.carRestitution, CONTACT.carFriction, iter === 0, CONTACT.carContactLever,
       );
     }
   }
@@ -259,7 +258,7 @@ export function collideWall(car, track, onWall) {
       if (d >= 0) continue;
       track.sdfGradient(x, z, tmpGrad);
       const j = solveContact(car, null, x, y, z, tmpGrad[0], 0, tmpGrad[1],
-        CONTACT.wallRestitution, CONTACT.wallFriction, iter === 0);
+        CONTACT.wallRestitution, CONTACT.wallFriction, iter === 0, CONTACT.wallContactLever);
       if (j > 0) {
         solved++;
         jTotal += j;

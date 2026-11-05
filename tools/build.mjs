@@ -6,7 +6,7 @@
 
 import { build } from 'esbuild';
 import { createServer } from 'node:http';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -50,12 +50,16 @@ html = html.replace('<script src="bundle.js"></script>', () => `<script>${js.rep
 await mkdir(outDir, { recursive: true });
 const outFile = join(outDir, 'index.html');
 await writeFile(outFile, html);
+// The music is too big to inline, and it streams, so it sits beside the page.
+const musicFile = join(outDir, 'music.mp3');
+await copyFile(join(root, 'assets', 'derby-destruction.mp3'), musicFile);
 console.log(`Built ${outFile} (${(html.length / 1048576).toFixed(1)} MB)`);
 
 if (process.argv.includes('--serve')) {
   const port = 5178;
-  createServer(async (_req, res) => {
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    res.end(await readFile(outFile));
+  createServer(async (req, res) => {
+    const music = req.url.startsWith('/music.mp3');
+    res.writeHead(200, { 'content-type': music ? 'audio/mpeg' : 'text/html; charset=utf-8' });
+    res.end(await readFile(music ? musicFile : outFile));
   }).listen(port, () => console.log(`Grudge Bowl: http://localhost:${port}`));
 }

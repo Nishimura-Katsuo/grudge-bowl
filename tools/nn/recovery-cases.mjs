@@ -17,9 +17,9 @@ export const recoveryCases=[
 ];
 export function recoveryCase(example,seconds=10){
   const factory=example.state?()=>{
-    const r=createRuntime(compileNetwork(spec)),action=new Float32Array(5),telemetry={mode:'unstick'};
+    const r=createRuntime(compileNetwork(spec)),action=new Float32Array(6),telemetry={mode:'unstick'};
     for(const [key,value] of Object.entries(example.state))r.state[spec.names.indexOf('memory.'+key)-OBS.size]=value;
-    return{telemetry,act(obs){const v=r.forward(obs);for(let k=0;k<5;k++)action[k]=v[spec.actions[k]];let mode=0;for(let k=1;k<4;k++)if(v[spec.modes[k]]>v[spec.modes[mode]])mode=k;telemetry.mode=['hunt','race','drift','unstick'][mode];return action;}};
+    return{telemetry,act(obs){const v=r.forward(obs);for(let k=0;k<6;k++)action[k]=v[spec.actions[k]];let mode=0;for(let k=1;k<4;k++)if(v[spec.modes[k]]>v[spec.modes[mode]])mode=k;telemetry.mode=['hunt','race','drift','unstick'][mode];return action;}};
   }:createBrain;
   const w=createWorld({seed:1,carCount:1,brainFactory:factory,spawnOverride:(_,track)=>{
     const p=track.sample(example.s,{}),angle=example.angle*Math.PI/180;

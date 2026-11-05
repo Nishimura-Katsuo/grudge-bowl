@@ -32,6 +32,7 @@
   <div class="focus-right">
     <div class="focus-track"><i id="focus-hp"></i></div>
     <div id="focus-cold"></div>
+    <div id="focus-weapon"></div>
   </div>
 </div>
 
@@ -63,22 +64,26 @@
   <div class="sheet">
     <h2>Grudge Bowl</h2>
     <p class="when">Twelve bots. One road, tied in a knot.</p>
-    <p>Sit back and watch. Three laps, three blind crossroads, three jumps that come down in the wrong place. First car home takes the Bowl, and every bot keeps a list of who hit it on the way there.</p>
+    <p>Sit back and watch. Five laps, three blind crossroads, three jumps that come down in the wrong place. Prize crates on the road hold things the Fair Safety Board has asked us to stop bringing. First car home takes the Bowl.</p>
     <button type="button" class="big-btn" id="start-btn">Start the race</button>
     <p class="keys">Click a name on the board to follow that bot. Keys 1 to 6 pick a camera, A hands it back to the director, Space pauses.</p>
     <a class="repo-link" href="https://github.com/Nishimura-Katsuo/grudge-bowl" target="_blank" rel="noopener">Source on GitHub</a>
   </div>
 </section>
 
-<section id="finish" class="poster" hidden>
-  <div class="sheet">
-    <h2 id="finish-name"></h2>
+<section id="finish" hidden>
+  <div class="podium" aria-live="polite">
     <p class="when">Takes the Bowl</p>
+    <h2 id="finish-name"></h2>
+    <blockquote id="finish-quip"></blockquote>
     <p id="finish-note"></p>
-    <ol id="finish-list"></ol>
-    <button type="button" class="big-btn" id="again-btn">Run it back</button>
-    <a class="repo-link" href="https://github.com/Nishimura-Katsuo/grudge-bowl" target="_blank" rel="noopener">Source on GitHub</a>
   </div>
+  <aside class="results">
+    <h3>Final results</h3>
+    <ol id="finish-list"></ol>
+    <p id="next-race"></p>
+    <a class="repo-link" href="https://github.com/Nishimura-Katsuo/grudge-bowl" target="_blank" rel="noopener">Source on GitHub</a>
+  </aside>
 </section>
 
 <script src="bundle.js"></script>

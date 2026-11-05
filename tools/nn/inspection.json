@@ -1,8 +1,8 @@
 {
-  "layers": 90,
-  "units": 1693,
-  "edges": 3164,
-  "parameters": 4857,
-  "states": 26,
-  "traceFrames": 11
+  "layers": 131,
+  "units": 4155,
+  "edges": 7896,
+  "parameters": 12051,
+  "states": 47,
+  "traceFrames": 31
 }

@@ -1,13 +1,28 @@
-// All sound is synthesised: no samples. One engine voice follows the camera's
-// subject, with impacts, tyre scrub and a crowd bed on top.
+// Sound effects are synthesised, no samples: one engine voice follows the camera's
+// subject, with impacts, tyre scrub and a crowd bed on top. The music is a plain
+// audio element, which plays from disk where fetching a file for Web Audio can't.
+
+const MUSIC_VOLUME = 0.5;
 
 export class Audio {
   constructor() {
     this.ctx = null;
     this.muted = false;
+    this.music = document.createElement('audio');
+    this.music.src = 'music.mp3';
+    this.music.loop = true;
+    this.music.preload = 'auto';
+    this.music.volume = MUSIC_VOLUME;
+  }
+
+  playMusic() {
+    this.music.play().catch(() => {
+      // Blocked until a gesture counts, or the file is missing. The race runs regardless.
+    });
   }
 
   start() {
+    this.playMusic();
     if (this.ctx) return;
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -68,6 +83,7 @@ export class Audio {
 
   setMuted(m) {
     this.muted = m;
+    this.music.muted = m;
     if (this.master) this.master.gain.value = m ? 0 : 0.55;
   }
 
@@ -109,6 +125,83 @@ export class Audio {
     thud.stop(t + 0.32);
 
     if (strength > 0.25) this.cheer(strength);
+  }
+
+  // One pitched sweep, the building block of most of the arsenal.
+  tone(from, to, seconds, type, level, near = 1) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = type;
+    osc.frequency.setValueAtTime(from, t);
+    osc.frequency.exponentialRampToValueAtTime(to, t + seconds);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(level * near, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + seconds);
+    osc.connect(g).connect(this.master);
+    osc.start(t);
+    osc.stop(t + seconds + 0.02);
+  }
+
+  hiss(frequency, seconds, level, near = 1) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noiseBuffer;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = frequency;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(level * near, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + seconds);
+    src.connect(f).connect(g).connect(this.master);
+    src.start(t, Math.random());
+    src.stop(t + seconds + 0.02);
+  }
+
+  pickup(near) {
+    this.tone(520, 1040, 0.12, 'square', 0.1, near);
+    setTimeout(() => this.tone(780, 1560, 0.14, 'square', 0.08, near), 80);
+  }
+
+  launch(near) {
+    this.hiss(1400, 0.5, 0.35, near);
+    this.tone(180, 620, 0.35, 'sawtooth', 0.12, near);
+  }
+
+  boom(near) {
+    this.tone(150, 26, 0.7, 'sine', 1, near);
+    this.hiss(320, 0.8, 0.8, near);
+    this.cheer(0.45);
+  }
+
+  foghorn(near) {
+    this.tone(118, 104, 1.1, 'sawtooth', 0.5, near);
+    this.tone(148, 130, 1.1, 'square', 0.22, near);
+  }
+
+  boing(near) {
+    this.tone(120, 820, 0.45, 'triangle', 0.55, near);
+  }
+
+  moo(near) {
+    this.tone(150, 92, 0.9, 'sawtooth', 0.32, near);
+  }
+
+  whirr(near) {
+    this.tone(300, 900, 1.2, 'sawtooth', 0.14, near);
+  }
+
+  clank(near) {
+    this.tone(1900, 700, 0.12, 'square', 0.2, near);
+  }
+
+  // Every note on the keyboard at once, then the frame hits the floor.
+  pianoCrash(near) {
+    for (const note of [65, 82, 110, 139, 233, 311, 466, 622, 932]) {
+      this.tone(note, note * 0.985, 1.4, 'triangle', 0.16, near);
+    }
+    this.boom(near);
   }
 
   cheer(amount) {

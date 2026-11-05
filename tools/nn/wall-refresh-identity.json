@@ -1,0 +1,64 @@
+{
+  "simRevision": {
+    "sha256": "b454261acdb7f5c27390be20d99ba34c5aabd8c96388e880d8372a00e1937241",
+    "files": [
+      {
+        "name": "arsenal.js",
+        "sha256": "0c0311bca4b4fe0d2d878338bd353bdaaa4eeba9c57b903d8ce14311d99bbe4e",
+        "mtime": "2026-11-04T22:36:02.970Z"
+      },
+      {
+        "name": "car.js",
+        "sha256": "97a26957074c04b3b5197e31ee38706458afc819614ceb7a06b3bcea3f172993",
+        "mtime": "2026-11-04T22:33:38.681Z"
+      },
+      {
+        "name": "collision.js",
+        "sha256": "d28f2a0ad23819267a6bc4caed65ceba73d794c11e0a66d1d5a0d70532d1c49a",
+        "mtime": "2026-11-04T23:09:39.296Z"
+      },
+      {
+        "name": "config.js",
+        "sha256": "297714bf41c03931b362a9337c84ec9476536a6aa37a4994cbcc01de4cc23e37",
+        "mtime": "2026-11-04T23:09:29.820Z"
+      },
+      {
+        "name": "math.js",
+        "sha256": "5c1af1de1539d93e835673046a6ac5598e7e08fa9781784135227ac8744be426",
+        "mtime": "2026-11-04T04:35:09.807Z"
+      },
+      {
+        "name": "roster.js",
+        "sha256": "460c597eb96bb29883d1a30eb582dce266930b507045a8a376fe9217f15237c9",
+        "mtime": "2026-11-04T04:39:35.032Z"
+      },
+      {
+        "name": "sensors.js",
+        "sha256": "e2a573b2be240e8d8611dae1027af3675e78f4243ca6698fa01b9416fe9ecf11",
+        "mtime": "2026-11-04T22:46:37.443Z"
+      },
+      {
+        "name": "track.js",
+        "sha256": "6cb9881e608faa430bd5e94fca45e38ae4b19198c1ccaefbd046b29e57fd6a98",
+        "mtime": "2026-11-04T19:56:53.505Z"
+      },
+      {
+        "name": "world.js",
+        "sha256": "8b2339b0804d1c09ae020cb85d5a91d8c35e33994d11df21f6adf5497c87ebcd",
+        "mtime": "2026-11-04T20:15:42.508Z"
+      }
+    ]
+  },
+  "hashes": {
+    "src/ai/weights.js": "52821dc504857b9873f6d32def4759d5ca291281c88f33295b013cf138272d05",
+    "src/ai/index.js": "6b5f1972389aa43ffef976a394139731aa0f3f63aabeae59b0ef236836d76924",
+    "src/ai/network.js": "2bf930d59e31d3904e982a1ac2315f70239fb56656da60cd31bce30143cf1e14",
+    "tools/nn/build.mjs": "b5525d898db769edefa20493896fc261316249f1c562d4c406d19325a4edaadd",
+    "tools/nn/arms.mjs": "739f653a1ebcb2e9cdee23ebbdf8352649d93a141a253ebf22b7accd3536b6dc",
+    "tools/nn/crates.mjs": "7c510d73175ebfe6bd808bc4a7c43d34713a0ad2c6178465ac28a9f858a34f9f",
+    "tools/nn/circuits.mjs": "ec0039dd318d620a0b0fd8302a21203ce02eb515580cfdb20dacfe3b9980111c",
+    "tools/nn/recovery.mjs": "e20f764404d36c6d0dfd6bb61a99ccb0abd9b4819377d110a62697b11d7072ad",
+    "docs/NEURON_MAP.md": "37f97944f6e5168d501e4ce24670db894e5bd7d05bd2011e8239d00fbae39cdc",
+    "tools/nn/trace.json": "ad65e3c8d865d29264a741b372127cf8cc59ed925e12fb68943bbe0ba4165079"
+  }
+}

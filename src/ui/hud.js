@@ -2,6 +2,8 @@
 // from each bot to whoever its brain is hunting at this moment.
 
 import { raceOrder } from '../sim/world.js';
+import { quipFor } from './quips.js';
+import { WEAPONS } from '../sim/arsenal.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
 
@@ -11,6 +13,21 @@ function readableInk(n) {
   const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
   return 0.299 * r + 0.587 * g + 0.114 * b > 140 ? '#1a1b20' : '#f3e2bd';
 }
+
+// One feed line per weapon: (who fired, who it's aimed at).
+const FIRED = {
+  barnBurner: (a) => `${a} let off a Barn Burner`,
+  grudgeSeeker: (a, b) => (b ? `${a} sent a Grudge Seeker after ${b}` : `${a} sent out a Grudge Seeker`),
+  welcomeMat: (a) => `${a} put out the Welcome Mat`,
+  oilSlick: (a) => `${a} dumped the oil`,
+  smokeBomb: (a) => `${a} popped smoke`,
+  threshingWhirl: (a) => `${a} is threshing`,
+  repoHook: (a) => `${a} fired the Repo Hook`,
+  bedspring: (a) => `${a} set a Bedspring`,
+  prizeBull: (a, b) => (b ? `${a} let the Prize Bull out. It wants ${b}.` : `${a} let the Prize Bull out`),
+  grandPiano: (a, b) => (b ? `${a} had a piano delivered to ${b}` : `${a} ordered a piano`),
+  foghorn: (a) => `${a} leaned on the Foghorn`,
+};
 
 const TAUNTS = [
   (a, b) => `${a} would like a word with ${b}`,
@@ -35,7 +52,6 @@ export class Hud {
   bindControls() {
     const { handlers } = this;
     this.el('start-btn').addEventListener('click', () => handlers.start());
-    this.el('again-btn').addEventListener('click', () => handlers.restart());
     document.querySelectorAll('[data-shot]').forEach((b) => {
       b.addEventListener('click', () => handlers.shot(b.dataset.shot || null));
     });
@@ -100,6 +116,7 @@ export class Hud {
     this.el('board').style.setProperty('--rows', world.cars.length);
     this.el('feed').textContent = '';
     this.el('finish').hidden = true;
+    document.body.classList.remove('scene');
     this.lastTaunt = -999;
     this.syncInert();
     this.prevTargets = world.cars.map(() => -1);
@@ -178,6 +195,7 @@ export class Hud {
       unstick: 'backing out',
     }[mode] ?? '';
     this.el('focus-mode').textContent = c.alive ? modeText : c.koReason ?? 'out';
+    this.el('focus-weapon').textContent = c.alive && c.weapon ? WEAPONS[c.weapon].name : '';
     this.el('focus-hp').style.transform = `scaleX(${c.health.toFixed(3)})`;
     this.el('focus-cold').textContent = c.alive
       ? `P${c.racePos + 1}, lap ${Math.min(c.laps + 1, world.laps)}`
@@ -232,6 +250,21 @@ export class Hud {
           'ko',
         );
         break;
+      case 'fired':
+        this.feed(FIRED[WEAPONS[e.weapon].key](name(e.car), e.target >= 0 ? name(e.target) : null), 'weapon');
+        break;
+      case 'hooked':
+        this.feed(`${name(e.car)} repossessed ${name(e.victim)}`, 'hit');
+        break;
+      case 'sprung':
+        this.feed(`${name(e.car)} found the Bedspring`, 'hit');
+        break;
+      case 'gored':
+        this.feed(`The Prize Bull went through ${name(e.victim)}`, 'hit');
+        break;
+      case 'pianoLands':
+        this.feed(`Piano, delivered. Signature not required.`, 'hit');
+        break;
       case 'landing':
         if (e.drop > 7 && Math.random() < 0.35) this.feed(`${name(e.car)} came down hard`);
         break;
@@ -248,28 +281,38 @@ export class Hud {
     }
   }
 
+  // The winner's scene: the car is on screen, so everything here stays out of its way.
   showFinish(world) {
-    const box = this.el('finish');
     const winner = world.cars[world.winner];
-    this.el('finish-name').textContent = winner ? winner.name : 'Nobody';
+    const name = this.el('finish-name');
+    name.textContent = winner ? winner.name : 'Nobody';
+    name.style.setProperty('--car', winner ? hex(winner.colour) : '#c8321f');
+    this.el('finish-quip').textContent = `\u201c${quipFor(world)}\u201d`;
     this.el('finish-note').textContent = winner
-      ? `Won in ${this.raceClock(world.raceTime)}. ${winner.knockouts} knockouts, ${Math.round(winner.health * 100)}% of the car left`
-      : 'Everyone wrecked.';
+      ? `Won in ${this.raceClock(world.raceTime)}. ${winner.knockouts} ${winner.knockouts === 1 ? 'knockout' : 'knockouts'}, ${Math.round(winner.health * 100)}% of the car left.`
+      : '';
+    const leader = winner ?? world.cars[world.finishOrder[0]];
     const list = this.el('finish-list');
     list.textContent = '';
-    world.finishOrder.slice(0, 12).forEach((id, place) => {
+    world.finishOrder.forEach((id, place) => {
       const c = world.cars[id];
       const li = document.createElement('li');
+      li.classList.toggle('out', !c.alive);
       const label = document.createElement('span');
       label.textContent = `${place + 1}. ${c.name}`;
-      const pts = document.createElement('span');
-      pts.textContent = c.alive ? `${c.laps} ${c.laps === 1 ? 'lap' : 'laps'}` : c.koReason ?? 'out';
-      li.append(label, pts);
+      const result = document.createElement('span');
+      if (!c.alive) result.textContent = c.koReason ?? 'out';
+      else if (place === 0) result.textContent = this.raceClock(world.raceTime);
+      else result.textContent = this.gapText(c, leader, place, world.track.length, world.laps);
+      li.append(label, result);
       list.append(li);
     });
-    box.hidden = false;
-    this.syncInert();
-    this.el('again-btn').focus();
+    this.el('finish').hidden = false;
+    document.body.classList.add('scene');
+  }
+
+  setNextRace(seconds) {
+    this.el('next-race').textContent = `Next race in ${seconds}`;
   }
 
   raceClock(seconds) {
@@ -281,9 +324,9 @@ export class Hud {
     this.syncInert();
   }
 
-  // While a poster is up, the board and controls behind it are out of the tab order.
+  // While the title is up, the board and controls behind it are out of the tab order.
   syncInert() {
-    const open = !this.el('title').hidden || !this.el('finish').hidden;
+    const open = !this.el('title').hidden;
     this.el('board').inert = open;
     this.el('controls').inert = open;
   }

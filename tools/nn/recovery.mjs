@@ -1,5 +1,5 @@
 // Construction only. Every predicate, latch and phase transition becomes a row.
-export function recovery(c,{i,e,o,ground,direction}){
+export function recovery(c,{i,e,o,ground,direction,settleReady}){
   const not=(n,x)=>c.affine(n,[[x,-1]],1),or=(n,bits)=>c.step(n,bits.map(x=>[x,1]),-.5);
   const front=[],rear=[];
   for(let k=0;k<11;k++){
@@ -24,10 +24,14 @@ export function recovery(c,{i,e,o,ground,direction}){
   const release=c.mux('recoveryRelease',i('memory.turning'),c.and('turnComplete',[aligned,releaseRoad]),safe,1);
   const need=or('recoveryNeeded',[blocked,backwards]);
   const slow=c.step('slow',[[c.unit('velocityF2',[[e('speedFwd'),1]],0,'square'),-1],[c.unit('velocityR2',[[e('speedRight'),1]],0,'square'),-1]],(3/40)**2);
-  const integrate=c.and('integrateStuck',[slow,need,not('notMakingProgress',moving),e('raceActive'),ground,not('notEscaping',i('memory.recover'))]);
+  // A six-second rule-level stall with grounded upright obstruction is genuine,
+  // even if contact keeps refreshing the post-impact settling countdown.
+  const settleEscape=c.and('settleEscape',[ground,c.step('escapeUpright',[[e('upright'),1]],-Math.SQRT1_2),slow,blocked,not('escapeNotWhirling',i('arms.whirling')),not('escapeStallExceeded',c.step('escapeStallNotExceeded',[[e('stallTimer'),-1]],.5))]);
+  const recoveryAllowed=or('recoveryAllowed',[settleReady,settleEscape]);
+  const integrate=c.and('integrateStuck',[recoveryAllowed,slow,need,not('notMakingProgress',moving),e('raceActive'),ground,not('notEscaping',i('memory.recover'))]);
   const stuck=c.gate('stuck',c.clip('stuckAdvance',[[i('memory.stuck'),1]],1/30,0,.6),integrate,1);
   const trigger=c.and('escapeTrigger',[c.step('stuckReady',[[stuck,1]],-.5),c.step('launchGrace',[[e('stallTimer'),1]],-.1),not('escapeAvailable',i('memory.recover'))]);
-  const active=c.and('escapeActive',[or('escapeHeld',[i('memory.recover'),trigger]),not('notReleased',release),e('raceActive')]);
+  const active=c.and('escapeActive',[recoveryAllowed,or('escapeHeld',[i('memory.recover'),trigger]),not('notReleased',release),e('raceActive')]);
   const turning=c.and('turning',[active,or('turnHeld',[i('memory.turning'),c.and('turnStart',[trigger,backwards])])]);
   // A 4.9 m body at 4.5 m/s² takes 1.48 s to back one length: allow 1.7 s.
   // The clock advances only in the requested gear and direction of travel.

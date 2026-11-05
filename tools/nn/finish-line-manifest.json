@@ -1,0 +1,111 @@
+{
+  "time": "2026-11-05T04:54:53.590Z",
+  "simRevision": {
+    "sha256": "0a60a94507980d902e180a4953bae030778c34502cb245e557b3b80386afd6f8",
+    "files": [
+      {
+        "name": "arsenal.js",
+        "sha256": "ec130f9419f75d3b451c272d8d1b77a74c3ad017e53a3d83df6c910d6dbe3ee5",
+        "mtime": "2026-11-05T04:52:12.914Z"
+      },
+      {
+        "name": "car.js",
+        "sha256": "da27e39db654c888f95a167edacae3534aa8a99b3e126982ce71ee3f9f75a86e",
+        "mtime": "2026-11-05T02:32:30.139Z"
+      },
+      {
+        "name": "collision.js",
+        "sha256": "d28f2a0ad23819267a6bc4caed65ceba73d794c11e0a66d1d5a0d70532d1c49a",
+        "mtime": "2026-11-04T23:09:39.296Z"
+      },
+      {
+        "name": "config.js",
+        "sha256": "6a229549b68c24ed9a4641669dac4aa177accaa36c6df12f61dd643985d6e992",
+        "mtime": "2026-11-05T04:51:44.091Z"
+      },
+      {
+        "name": "math.js",
+        "sha256": "5c1af1de1539d93e835673046a6ac5598e7e08fa9781784135227ac8744be426",
+        "mtime": "2026-11-04T04:35:09.807Z"
+      },
+      {
+        "name": "roster.js",
+        "sha256": "460c597eb96bb29883d1a30eb582dce266930b507045a8a376fe9217f15237c9",
+        "mtime": "2026-11-04T04:39:35.032Z"
+      },
+      {
+        "name": "sensors.js",
+        "sha256": "fbfc1c233eb3ab9768322cfb99ce404855252fb1540b3a076777021ff0ec76b8",
+        "mtime": "2026-11-05T04:51:44.091Z"
+      },
+      {
+        "name": "track.js",
+        "sha256": "6cb9881e608faa430bd5e94fca45e38ae4b19198c1ccaefbd046b29e57fd6a98",
+        "mtime": "2026-11-04T19:56:53.505Z"
+      },
+      {
+        "name": "world.js",
+        "sha256": "e2bbcc367cd9806ab4dcfd323836a2c00030ed495c4c21723c9207160663dca5",
+        "mtime": "2026-11-05T04:52:12.914Z"
+      }
+    ]
+  },
+  "weightSha256": "ebd81dc2cb4cfe3292cb5b8311c67eba5aeb628934c9dffdb32789347bdd62ed",
+  "finishLine": 1030,
+  "gridLine": 52,
+  "laps": 5,
+  "timeLimit": 200,
+  "seeds": [
+    1,
+    7,
+    42,
+    1201,
+    1709,
+    2309,
+    2903,
+    3613,
+    4801,
+    6007,
+    6011,
+    6029,
+    6043,
+    6053,
+    6067,
+    6073,
+    6089,
+    6101,
+    6113,
+    6121,
+    8101,
+    8111,
+    8117,
+    8123,
+    8147,
+    8161,
+    8171,
+    8191,
+    9103,
+    9113,
+    9133,
+    9151,
+    9173,
+    9199,
+    9203,
+    9221,
+    9239,
+    9257,
+    10007,
+    10037,
+    10061,
+    10093,
+    10103,
+    10133,
+    10151,
+    10177,
+    10211,
+    10243,
+    10267,
+    10289
+  ],
+  "note": "Shipping review refresh; best laps exclude opening lap; weights unchanged."
+}

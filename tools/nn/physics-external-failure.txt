@@ -1,0 +1,32 @@
+✖ a test driver can lap the Knot quickly without leaving the road (513.6355ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 585.5237
+
+✖ failing tests:
+
+test at test\physics.test.js:406:1
+✖ a test driver can lap the Knot quickly without leaving the road (513.6355ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'racing'
+  - 'finished'
+  
+      at TestContext.<anonymous> (<repo>/test/physics.test.js:421:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.start (node:internal/test_runner/test:1096:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'racing',
+    expected: 'finished',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

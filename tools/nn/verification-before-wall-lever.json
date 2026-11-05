@@ -1,0 +1,11 @@
+{
+  "simSha256": "986f2dbe8152f7af1b20b8c997b4bd4813f88121dac2dae38be0df4638e759ae",
+  "weightSha256": "52821dc504857b9873f6d32def4759d5ca291281c88f33295b013cf138272d05",
+  "byteIdentical": true,
+  "traceExact": true,
+  "traceFrames": 31,
+  "traceActivations": 3232,
+  "testsPassed": 154,
+  "neuralTests": 59,
+  "browserBundleBytes": 167795
+}

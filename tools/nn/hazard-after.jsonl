@@ -1,0 +1,4 @@
+{"kind":"mine","avoid":true,"seconds":2.15,"minDistance":9.021871418019902,"minRoad":2.2708319669612056,"health":1,"progress":70.10030613803974,"clear":true}
+{"kind":"mine","avoid":false,"seconds":2.0625,"minDistance":0.07896644522362488,"minRoad":2.4130958658913033,"health":0.9985529495159661,"progress":70.15076316286877,"clear":false}
+{"kind":"oil","avoid":true,"seconds":2.15,"minDistance":9.021871418019902,"minRoad":2.2708319669612056,"health":1,"progress":70.10030613803974,"clear":true}
+{"kind":"oil","avoid":false,"seconds":2.1125,"minDistance":0.07171327782749556,"minRoad":2.4130958658913033,"health":1,"progress":70.1101127939744,"clear":false}

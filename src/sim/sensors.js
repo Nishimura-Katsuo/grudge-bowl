@@ -7,6 +7,7 @@
 
 import { CAR_COUNT, RULES, SURFACE_PROPS } from './config.js';
 import { clamp } from './math.js';
+import { insideSmoke, smokeBetween, WEAPONS } from './arsenal.js';
 
 export const LOOKAHEADS = [8, 16, 28, 45, 65];
 export const RAY_ANGLES_DEG = [0, 15, -15, 32, -32, 55, -55, 80, -80, 115, -115, 150, -150, 180];
@@ -30,7 +31,7 @@ const EGO_FIELDS = [
   'alignment',       // bent steering bias in rad * 5
   'upright',         // world-up component of body up, 1 flat, 0 on its side, -1 roof
   'wheelsDown',      // fraction of wheels on the ground
-  'surfaceGrip',     // grip multiplier under the car
+  'surfaceGrip',     // grip of the surface under the car / 2: mud 0.885, clay 1.15, asphalt 1.3
   'raceActive',      // 0 during the countdown, 1 while racing
   'stallTimer',      // seconds without gaining route / stall limit. Reaching 1 is a knockout.
   'hitTaken',        // strongest hit taken this decision tick, 0..1
@@ -74,6 +75,25 @@ const OPPONENT_FIELDS = [
   'raceGap',    // their race distance minus mine / lap length. > 0 means they are ahead in the race.
 ];
 
+// Appended after the rivals, so everything above keeps its index. One `arms.<key>`
+// per weapon reads 1 while holding it; the rest are described in BOT_CONTRACT.md.
+const ARMS_FIELDS = [
+  ...['barnBurner', 'grudgeSeeker', 'welcomeMat', 'oilSlick', 'smokeBomb', 'threshingWhirl', 'repoHook', 'bedspring', 'prizeBull', 'grandPiano', 'foghorn'],
+  'ready',        // 1 while holding a weapon that can be used now
+  'whirling',     // 1 during my own Threshing Whirl
+  'blinded',      // 1 inside a smoke cloud
+  'oiled',        // 1 while my tyres are on oil
+  'incoming',     // 1 when a shot aimed at me is close, 0 at 60 m or more
+  'toCrate',      // route metres to the next spot with a live crate / ROUTE_RANGE, 0..1
+  'crateRight',   // nearest live crate there, metres right of me / local half width
+  'toHazard',     // metres ahead to the nearest mine, oil or spring in my road / 60; 1 when clear
+  'hazardRight',  // that hazard, metres right of me / 10
+  'aheadRange',   // nearest visible rival within 20 degrees of my nose / 100; 1 when none
+  'aheadBearing', // its bearing from my nose, rad, right positive
+  'behindRange',  // nearest visible rival within 35 degrees of my tail / 40; 1 when none
+  'closeRivals',  // living rivals within 7 m / 4
+];
+
 function buildLayout() {
   const index = {};
   const names = [];
@@ -82,6 +102,7 @@ function buildLayout() {
   LOOKAHEADS.forEach((d, k) => LOOKAHEAD_FIELDS.forEach((f) => add(`look${k}.${f}`)));
   RAY_ANGLES_DEG.forEach((_, k) => add(`ray${k}`));
   for (let s = 0; s < OPPONENT_SLOTS; s++) OPPONENT_FIELDS.forEach((f) => add(`opp${s}.${f}`));
+  ARMS_FIELDS.forEach((f) => add(`arms.${f}`));
   return { index, names, size: names.length };
 }
 
@@ -104,6 +125,71 @@ const rayDirs = RAY_ANGLES_DEG.map((deg) => {
 });
 
 const pt = { x: 0, z: 0, tx: 0, tz: 0, curvature: 0 };
+
+// A rival behind a smoke cloud, or any rival at all from inside one, can't be seen.
+function hiddenBySmoke(world, car, o, blinded) {
+  return blinded || insideSmoke(world, o.px, o.pz) || smokeBetween(world, car.px, car.pz, o.px, o.pz);
+}
+
+function fillArms(world, car, out, start, hx, hz, rx, rz, blinded) {
+  const track = world.track;
+  const a = world.arsenal;
+  let i = start;
+  for (let w = 1; w < WEAPONS.length; w++) out[i++] = car.weapon === w ? 1 : 0;
+  out[i++] = car.weapon && car.fireLock <= 0 && !car.whirl ? 1 : 0;
+  out[i++] = car.whirl ? 1 : 0;
+  out[i++] = blinded ? 1 : 0;
+  out[i++] = car.onOil ? 1 : 0;
+
+  let threat = 60;
+  for (const s of a.shots) {
+    const aimed = s.target === car.id || (s.kind === 'rocket' && s.owner !== car.id) || (s.kind === 'hook' && s.owner !== car.id);
+    if (aimed) threat = Math.min(threat, Math.hypot(s.x - car.px, s.z - car.pz));
+  }
+  for (const d of a.drops) if (d.target === car.id) threat = Math.min(threat, 30);
+  out[i++] = 1 - threat / 60;
+
+  let toCrate = ROUTE_RANGE, crateRight = 0;
+  const halfWidth = track.halfWidthAt(car.trackS);
+  for (const crate of a.crates) {
+    if (crate.respawn > 0) continue;
+    const d = track.route(car.trackS, crate.s);
+    const right = (crate.x - car.px) * rx + (crate.z - car.pz) * rz;
+    if (d < toCrate - 2 || (Math.abs(d - toCrate) <= 2 && Math.abs(right) < Math.abs(crateRight * halfWidth))) {
+      toCrate = d;
+      crateRight = right / halfWidth;
+    }
+  }
+  out[i++] = Math.min(1, toCrate / ROUTE_RANGE);
+  out[i++] = crateRight;
+
+  let hazardAhead = 60, hazardRight = 0;
+  for (const h of a.hazards) {
+    if (h.kind === 'smoke' || h.arm > 0) continue;
+    const dx = h.x - car.px, dz = h.z - car.pz;
+    const ahead = dx * hx + dz * hz, right = dx * rx + dz * rz;
+    if (ahead > 0 && ahead < hazardAhead && Math.abs(right) < 12) { hazardAhead = ahead; hazardRight = right; }
+  }
+  out[i++] = hazardAhead / 60;
+  out[i++] = hazardRight / 10;
+
+  let aheadRange = 100, aheadBearing = 0, behindRange = 40, close = 0;
+  for (const o of world.cars) {
+    if (o === car || !o.alive) continue;
+    const dx = o.px - car.px, dz = o.pz - car.pz, d = Math.hypot(dx, dz) || 1;
+    if (d < 7) close++;
+    if (hiddenBySmoke(world, car, o, blinded)) continue;
+    const ahead = dx * hx + dz * hz, right = dx * rx + dz * rz;
+    const bearing = Math.atan2(right, ahead);
+    if (Math.abs(bearing) < 0.35 && d < aheadRange) { aheadRange = d; aheadBearing = bearing; }
+    if (Math.abs(bearing) > Math.PI - 0.6 && d < behindRange) behindRange = d;
+  }
+  out[i++] = aheadRange / 100;
+  out[i++] = aheadBearing;
+  out[i++] = behindRange / 40;
+  out[i++] = close / 4;
+  return i;
+}
 
 export function fillObservation(world, car, out) {
   const track = world.track;
@@ -136,7 +222,7 @@ export function fillObservation(world, car, out) {
   out[i++] = car.alignment * 5;
   out[i++] = R[4];
   out[i++] = down / 4;
-  out[i++] = SURFACE_PROPS[track.surfaceAt(car.px, car.pz)].grip;
+  out[i++] = SURFACE_PROPS[track.surfaceAt(car.px, car.pz)].grip / 2;
   out[i++] = world.phase === 'racing' ? 1 : 0;
   out[i++] = car.stallTime / RULES.stalledKoSeconds;
   out[i++] = car.hitAny;
@@ -181,10 +267,11 @@ export function fillObservation(world, car, out) {
     out[i++] = track.raycast(car.px, car.pz, wx, wz, RAY_MAX) / RAY_MAX;
   }
 
+  const blinded = insideSmoke(world, car.px, car.pz);
   for (let slot = 0; slot < OPPONENT_SLOTS; slot++) {
     const id = slotToCarId(car.id, slot);
     const o = world.cars[id];
-    if (!o || o.towed) {
+    if (!o || o.towed || hiddenBySmoke(world, car, o, blinded)) {
       for (let f = 0; f < OBS_OPP_FIELDS; f++) out[i + f] = 0;
       i += OBS_OPP_FIELDS;
       continue;
@@ -218,6 +305,8 @@ export function fillObservation(world, car, out) {
     out[i++] = Math.min(1, track.route(o.trackS, next.pass.other) / ROUTE_RANGE);
     out[i++] = (o.progress - car.progress) / L;
   }
+
+  fillArms(world, car, out, i, hx, hz, rx, rz, blinded);
 
   for (let k = 0; k < OBS.size; k++) out[k] = clamp(out[k], -1.5, 1.5);
   car.hitFrom.fill(0);

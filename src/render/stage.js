@@ -2,7 +2,7 @@
 // built from the sim's wall polylines, and the county-fair clutter around them.
 
 import * as THREE from 'three';
-import { START_LINE_S, SURFACE } from '../sim/config.js';
+import { FINISH_LINE_S, GRID_LINE_S, SURFACE } from '../sim/config.js';
 import { createRng } from '../sim/math.js';
 
 const SUN_DIR = new THREE.Vector3(-0.62, 0.3, 0.72).normalize();
@@ -236,8 +236,8 @@ function paintGround(track) {
     ctx.restore();
   }
 
-  // Start line across the main straight.
-  const startLine = track.indexAt(START_LINE_S);
+  // Finish line across the back straight.
+  const startLine = track.indexAt(FINISH_LINE_S);
   const [sx, sy] = toPx(c.px[startLine], c.pz[startLine]);
   const startWidth = track.hw[startLine];
   ctx.save();
@@ -251,6 +251,17 @@ function paintGround(track) {
       ctx.fillRect(j * 1.5 - 2.2, i * 1.5 - startWidth, 1.5, 1.5);
     }
   }
+  ctx.restore();
+
+  // Plain start line in front of the grid.
+  const gridLine = track.indexAt(GRID_LINE_S);
+  const [gx, gy] = toPx(c.px[gridLine], c.pz[gridLine]);
+  ctx.save();
+  ctx.translate(gx, gy);
+  ctx.rotate(Math.atan2(c.tz[gridLine], c.tx[gridLine]));
+  ctx.scale(scale, scale);
+  ctx.fillStyle = '#ece3cd';
+  ctx.fillRect(1.6, -track.hw[gridLine], 1.1, track.hw[gridLine] * 2);
   ctx.restore();
 
   const tex = new THREE.CanvasTexture(canvas);

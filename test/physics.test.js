@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { applyDamage, createWorld, raceOrder, stepWorld } from '../src/sim/world.js';
 import { getTrack } from '../src/sim/track.js';
-import { CAR, PHYSICS_HZ, RULES, START_LINE_S, SURFACE, SURFACE_PROPS } from '../src/sim/config.js';
+import { CAR, PHYSICS_HZ, RULES, FINISH_LINE_S, SURFACE, SURFACE_PROPS } from '../src/sim/config.js';
 import { integratePosition, stepCarForces } from '../src/sim/car.js';
 import { collideCars } from '../src/sim/collision.js';
 import { createRng, quatToMatrix } from '../src/sim/math.js';
@@ -324,7 +324,7 @@ test('a parked car settles on its suspension without drifting or sinking', () =>
   }
 });
 
-test('acceleration: 0-100 km/h in a plausible time for a heavy V8 sedan', () => {
+test('acceleration: 0-100 km/h in the time of a very fast race car', () => {
   const world = solo(fixed(0, 1), STRAIGHT_S);
   const car = world.cars[0];
   let t = 0;
@@ -334,7 +334,7 @@ test('acceleration: 0-100 km/h in a plausible time for a heavy V8 sedan', () => 
     stepWorld(world);
     t += 1 / PHYSICS_HZ;
   }
-  assert.ok(t > 3.5 && t < 11, `0-100 took ${t}`);
+  assert.ok(t > 1.5 && t < 4, `0-100 took ${t}`);
 });
 
 test('braking from speed: dives onto the front axle and stops', () => {
@@ -353,14 +353,15 @@ test('braking from speed: dives onto the front axle and stops', () => {
 });
 
 test('steady cornering transfers load to the outside wheels', () => {
-  const world = solo(fixed(0.25, 0.42), STRAIGHT_S);
+  const world = solo(fixed(0.22, 0.3), STRAIGHT_S);
   world.time = RULES.countdown;
   const car = world.cars[0];
-  // Spawn in the open and drive into a right-hander on flat ground.
-  seconds(world, 3.5);
-  const leftLoad = car.wheels[0].load + car.wheels[2].load;
-  const rightLoad = car.wheels[1].load + car.wheels[3].load;
-  assert.ok(leftLoad > rightLoad * 1.15, `left ${leftLoad} right ${rightLoad}`);
+  // Drive into a right-hander. The tyre lever keeps load transfer mild, by design.
+  let most = 0;
+  seconds(world, 3, () => {
+    most = Math.max(most, (car.wheels[0].load + car.wheels[2].load) / Math.max(1, car.wheels[1].load + car.wheels[3].load));
+  });
+  assert.ok(most > 1.08, `best left/right load ratio ${most}`);
 });
 
 test('handbrake turn: locked rears break traction and the car oversteers past its velocity', () => {
@@ -406,7 +407,8 @@ test('a test driver can lap the Knot quickly without leaving the road', () => {
   const world = createWorld({
     carCount: 1,
     laps: 3,
-    brainFactory: () => testDriver({ paceShare: 0.92 }),
+    // This driver has no recovery, so keep it below the pace that loses it at the Pancake funnel.
+    brainFactory: () => testDriver({ paceShare: 0.74 }),
   });
   let minClearance = Infinity;
   const car = world.cars[0];
@@ -420,8 +422,9 @@ test('a test driver can lap the Knot quickly without leaving the road', () => {
   assert.equal(world.phase, 'finished');
   assert.equal(world.winner, car.id);
   assert.ok(minClearance > 0.5, `closest approach to a wall ${minClearance}`);
-  assert.ok(clock[2] - clock[1] < 54, `lap ${clock[2] - clock[1]}`);
-  assert.ok(car.health > 0.8, `health ${car.health}`);
+  assert.ok(clock[2] - clock[1] < 41, `lap ${clock[2] - clock[1]}`);
+  // This plain driver brushes the barrier at speed, and scrapes cost more than they did.
+  assert.ok(car.health > 0.5, `health ${car.health}`);
 });
 
 test('T-bone: the struck car takes more damage and gets knocked sideways', () => {
@@ -464,6 +467,26 @@ test('hitting a wall stops the car, keeps it inside and hurts', () => {
   seconds(world, 2);
   assert.ok(world.track.sdfAt(car.px, car.pz) > -0.5, `sdf ${world.track.sdfAt(car.px, car.pz)}`);
   assert.ok(car.health < 1);
+});
+
+test('a fast glancing wall hit does not roll the car', () => {
+  const track = getTrack();
+  const p = track.sample(100, { x: 0, z: 0, tx: 0, tz: 0, curvature: 0 });
+  const nose = [p.tx * 0.94 - p.tz * 0.34, p.tz * 0.94 + p.tx * 0.34]; // 20 degrees toward the wall
+  const world = createWorld({
+    carCount: 1,
+    spawnOverride: () => ({ x: p.x, z: p.z, tx: nose[0], tz: nose[1], s: 100 }),
+    brainFactory: () => fixed(0, 0),
+  });
+  world.time = RULES.countdown;
+  world.phase = 'racing';
+  const car = world.cars[0];
+  car.vx = nose[0] * 50;
+  car.vz = nose[1] * 50;
+  for (const w of car.wheels) w.omega = 50 / CAR.wheelRadius;
+  let lowest = 1;
+  seconds(world, 2, () => { lowest = Math.min(lowest, car.R[4]); });
+  assert.ok(lowest > 0.25, `tipped to ${lowest}`);
 });
 
 test('a flipped car rests on its roof and is eventually ruled out', () => {
@@ -735,7 +758,7 @@ test('a car has to drive over the painted line to win, and the leader on the roa
   const world = createWorld({
     carCount: 2,
     laps: 1,
-    spawnOverride: (i, t) => ({ ...t.sample(START_LINE_S - 0.4, {}), s: START_LINE_S - 0.4 }),
+    spawnOverride: (i, t) => ({ ...t.sample(FINISH_LINE_S - 0.4, {}), s: FINISH_LINE_S - 0.4 }),
     brainFactory: () => fixed(0, 1),
   });
   world.time = RULES.countdown;
@@ -745,18 +768,20 @@ test('a car has to drive over the painted line to win, and the leader on the roa
   behind.progress = L - 0.4;
   ahead.progress = L - 0.35;
   behind.stallMark = behind.progress; ahead.stallMark = ahead.progress;
-  behind.pz += 3; ahead.pz -= 3;
-  ahead.px += 0.05;
+  const { tx, tz } = world.track.sample(FINISH_LINE_S, {});
+  behind.px -= tz * 3; behind.pz += tx * 3;
+  ahead.px += tz * 3 + tx * 0.05; ahead.pz += -tx * 3 + tz * 0.05;
   behind.trackS = world.track.project(behind.px, behind.pz, behind.trackS);
   ahead.trackS = world.track.project(ahead.px, ahead.pz, ahead.trackS);
-  behind.vx = ahead.vx = 30;
+  behind.vx = ahead.vx = tx * 30;
+  behind.vz = ahead.vz = tz * 30;
   for (const c of world.cars) for (const w of c.wheels) w.omega = 30 / CAR.wheelRadius;
   let guard = 0;
   while (world.phase === 'racing' && guard++ < 240) stepWorld(world);
   assert.equal(world.phase, 'finished');
   assert.equal(world.winner, ahead.id, '5 cm ahead on the road is ahead');
-  const gone = ((ahead.trackS - START_LINE_S) % L + L) % L;
-  assert.ok(gone < 1, `finished ${gone} m past the line`);
+  const gone = Math.abs((((ahead.trackS - FINISH_LINE_S + L / 2) % L) + L) % L - L / 2);
+  assert.ok(gone < 1, `finished ${gone} m from the line`);
 });
 
 test('being knocked onto the other strand neither gains ground nor moves the line', () => {
@@ -767,12 +792,12 @@ test('being knocked onto the other strand neither gains ground nor moves the lin
   const L = world.track.length;
   const pass = world.track.passes[2];
   const aligned = () => {
-    const diff = (((car.progress - (car.trackS - START_LINE_S)) % L) + L) % L;
+    const diff = (((car.progress - (car.trackS - FINISH_LINE_S)) % L) + L) % L;
     return Math.min(diff, L - diff);
   };
   placeOnRoad(world, car, pass.s - 2);
   car.trackS = pass.s - 2;
-  car.progress = pass.s - 2 - START_LINE_S;
+  car.progress = pass.s - 2 - FINISH_LINE_S;
   const before = car.progress;
   // Forward switch: from the strand at 466 onto the one at 850, past the crossing.
   placeOnRoad(world, car, pass.other + 30);
@@ -848,7 +873,7 @@ test('finish fraction is measured from the step that crossed the line', () => {
   const world = createWorld({
     carCount: 1,
     laps: 1,
-    spawnOverride: (i, t) => ({ ...t.sample(START_LINE_S - 0.03, {}), s: START_LINE_S - 0.03 }),
+    spawnOverride: (i, t) => ({ ...t.sample(FINISH_LINE_S - 0.03, {}), s: FINISH_LINE_S - 0.03 }),
     brainFactory: () => fixed(0, 1),
   });
   world.time = RULES.countdown;
@@ -867,10 +892,10 @@ test('a strand penalty takes the lap back from the counters too', () => {
   world.phase = 'racing';
   const car = world.cars[0];
   const L = world.track.length;
-  const pass = world.track.passes[2];
+  const pass = world.track.passes[0];
   placeOnRoad(world, car, pass.s - 2);
   car.trackS = pass.s - 2;
-  car.progress = L + (pass.s - 2 - START_LINE_S);
+  car.progress = L + (((pass.s - 2 - FINISH_LINE_S) % L) + L) % L;
   car.stallMark = car.progress;
   stepWorld(world);
   assert.equal(car.laps, 1);
@@ -906,6 +931,47 @@ test('a rising car rear-ending another is not a landing', () => {
   }
   assert.ok(hit, 'no hit event');
   assert.equal(hit.upper, -1);
+});
+
+test('after the flag the winner burns out and everyone else stops', () => {
+  const world = createWorld({ carCount: 3, laps: 1, seed: 2, brainFactory: () => fixed(0, 1) });
+  world.time = RULES.countdown;
+  world.phase = 'racing';
+  seconds(world, 2);
+  const [a, b] = world.cars;
+  a.progress = world.track.length + 1;
+  stepWorld(world);
+  assert.equal(world.phase, 'finished');
+  assert.equal(world.winner, a.id);
+  const score = a.score;
+  seconds(world, 8);
+  assert.equal(a.burningOut, true);
+  assert.equal(b.burningOut, false);
+  assert.ok(speedOf(b) < 0.1, `a loser still rolling at ${speedOf(b)}`);
+  assert.ok(Math.abs(a.input.steer) > 0.5, 'the winner is on lock');
+  assert.ok(a.input.throttle > 0.5);
+  assert.equal(a.score, score);
+});
+
+test('a winner boxed in by a wall backs out and keeps going', () => {
+  const world = createWorld({
+    carCount: 2,
+    spawnOverride: (i) => (i === 0 ? { x: -70, z: -28.5, tx: 0, tz: -1, s: 34 } : { x: 60, z: -22, tx: 1, tz: 0, s: 134 }),
+    brainFactory: () => fixed(0, 0),
+  });
+  world.phase = 'finished';
+  world.winner = 0;
+  world.flagTime = -10;
+  world.time = RULES.countdown;
+  const car = world.cars[0];
+  let backed = false, drove = false;
+  seconds(world, 6, () => {
+    backed = backed || car.input.reverse > 0.5;
+    drove = drove || (backed && car.gear >= 0 && car.input.throttle > 0.5);
+  });
+  assert.equal(backed, true);
+  assert.equal(drove, true, 'back in drive and on the throttle');
+  assert.ok(car.vx * car.R[0] + car.vz * car.R[6] > -3, 'not running away backwards');
 });
 
 test('last car running wins even if a wreck went further', () => {
@@ -984,9 +1050,9 @@ test('every grid slot crosses the same line to complete a lap', () => {
   const world = createWorld({ seed: 5 });
   const L = world.track.length;
   for (const car of world.cars) {
-    const toLine = (((START_LINE_S - car.trackS) % L) + L) % L;
-    assert.ok(Math.abs(car.progress + toLine) < 1e-6, `${car.name} ${car.progress} ${toLine}`);
-    assert.ok(car.progress <= 1e-9);
+    const toLine = (((FINISH_LINE_S - car.trackS) % L) + L) % L;
+    assert.ok(Math.abs(car.progress + toLine - L) < 1e-6, `${car.name} ${car.progress} ${toLine}`);
+    assert.ok(car.progress > 0 && car.laps === 0, 'the grid sits past the line, with no lap credited');
   }
 });
 

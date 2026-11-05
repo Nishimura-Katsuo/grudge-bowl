@@ -1,0 +1,112 @@
+✔ crate interpolation, coordinates, temperament and distance ramp match independent expressions (19.9731ms)
+✔ crate clearance follows the filtered target side, including reset and opposite-history transients (0.9823ms)
+✔ crate reach cone matches its speed-dependent expression and rejects disappearing late targets (16.0132ms)
+✔ crates yield to weapons, passing, hazards, recovery, walls, jumps, slip and corner pace (3.0084ms)
+✔ an empty car physically detours and collects an off-line crate; a held weapon leaves its normal trajectory unchanged (333.8516ms)
+✔ crate lane correction preserves corner preview and spends only spare surface grip (1.3324ms)
+✔ lead-change measurement retains the incumbent at quantized ties (0.1397ms)
+✔ rebuild is byte identical, finite, strictly layered and uses the new contract (14.4897ms)
+✔ gates, muxes, products and clamps match independent expressions at bounds and random interiors (2.1251ms)
+✔ comparators, Boolean AND and WTA have deterministic ties (0.3371ms)
+✔ eleven-way traffic WTA matches independent argmax on negative scores, near ties and random interiors (1.8512ms)
+✔ all grudge memories and rage follow the stated leak equations (16.0409ms)
+✔ continuous one-second preview and pursuit match geometry at boundaries and high speeds (3.7189ms)
+✔ horizontal speed and front-axle compensation match independent vector geometry (2.8287ms)
+✔ pace-note braking anticipates deceleration and never brakes airborne (1.3902ms)
+✔ larger front-axle steering range cannot leak through airborne or recovery gates (0.2875ms)
+✔ fast approaches preserve one second to settle for jumps and 1.5 seconds to acquire crates (0.5795ms)
+✔ zero towed slots are absent; wrecks at any heading are passed but never displayed as targets (0.3962ms)
+✔ passing picks the free side, stays inside the road and smoothly returns (2.6803ms)
+✔ aggression only narrows a nearby passing gap, ignores backmarkers without grudge, never changes speed or gear (0.3475ms)
+✔ jump approach suppresses passing, lip limits steer, and airborne wheels receive no brake (0.3368ms)
+✔ at racing speed traction envelopes decrease with wheelspin and large body slip (1.0166ms)
+✔ low-speed slip authority follows lateral load at 2–6 m/s in every horizontal direction (3.4955ms)
+✔ a nose-wall reverse actually travels backwards and turns toward the route (31.7457ms)
+✔ clear aligned or oblique launches never accumulate stuck time, even with stale stall evidence (16.8812ms)
+✔ recovery requires sustained blockage, releases with clearance hysteresis, and clears all control latches (0.869ms)
+✔ a forward-moving car does not newly reverse into traffic (4.4074ms)
+✔ backward recovery uses opposite full locks, pauses phase time while shifting, and finishes only at a good heading (10.51ms)
+✔ rear walls select a forward turn and genuine no-motion changes the failed leg (1.125ms)
+✔ recovery geometry uses solid slots and projected widths; zero slots do not block (1.1503ms)
+✔ alignment compensation applies after recovery steering, including reverse (0.2072ms)
+✔ fixed physical open-road and wall cases regain forward travel without repeated latch cycles (165.59ms)
+✔ aggression ablation clamps grudges from decision zero and compares matching car-laps (2.4266ms)
+✔ act reuses its output and telemetry has stable car IDs (0.2483ms)
+✔ unarmed fast-car regression completes five laps below 37 seconds without stops (326.0316ms)
+✔ a full grid progresses and records actual credited damage (993.7965ms)
+✔ rear-quarter traffic cannot mask a forward wreck, but still occupies its passing lane (0.2653ms)
+✔ post-collision stale lock is reconsidered and moving route loss has a leg deadline (2.6435ms)
+✔ aggressive narrowing has safety gates, a half-second pulse and four-second rest (13.0021ms)
+✔ telemetry reports effective grounded narrowing and horizontal drift (0.4724ms)
+✔ display rage responds to contact and lost places with no path to driving or its recurrent state (7.8466ms)
+✔ route-loss deadline preserves an engaged turn that reduces heading error, but never exempts a failed shift (8.0492ms)
+✔ soft deadlines retain opportunity and posture, with grounded hard expiry at nineteen seconds (3.012ms)
+✔ weapon temperament changes timing, aim range, grudge restraint and defensive threat threshold (7.49ms)
+✔ hidden slots preserve remembered identity and leaking grudges without creating a zero-distance obstacle (0.3086ms)
+✔ whirl, airborne and abrupt throws clear recovery and keep it inhibited during settling (0.6087ms)
+✔ oil limits inputs and hazard offsets stay inside available road (2.2ms)
+✔ credited weapon damage reaches rage and the correct fixed-slot grudge (0.4056ms)
+✔ absent tail range cannot become a tactical drop at maximum aggression and rage (0.2246ms)
+✔ each weapon class takes its intended tactical opportunity after pickup delay (1.9397ms)
+✔ fixed mine encounter detours clear with road margin (5.5008ms)
+✔ settling exception permits urgent real obstruction but preserves forced-motion protection (1.3752ms)
+✔ hazards rotate from nose to road and the selected waypoint rotates back (0.9452ms)
+✔ rocket corridor rejects a three-metre miss and relative lateral interception failures (0.4652ms)
+✖ rocket blast attribution survives nested wheelOff and does not count a fly-by (4.6914ms)
+✔ physical oil encounter clears its full body corridor (6.2187ms)
+✖ no-crates grid pins measured checkpoints and retains the recovery requirement (9757.8472ms)
+✔ hard expiry clock fires targetless only at nineteen seconds and never while airborne (20.2023ms)
+✔ rocket matching and interception have no graph path into driving actions (0.6312ms)
+✔ open-road closing response solves relative braking distance and cannot enforce a preferred gap (8.3314ms)
+✔ crossroads and landing grace disable new yielding, while grounded hit grace does not (2.1445ms)
+✔ open-road elbow remains off and occupied lanes do not get a passing request (9.3124ms)
+✔ contact metrics separate generated crossing and landing zones and preserve nested damage (0.5882ms)
+✔ launch and pulling-away traffic never request new slowing, and a free road lane wins (5.6891ms)
+✔ passing begins in time, survives speed matching, and lets a lapped obstacle be passed (0.6424ms)
+✔ merge guard retains the lane beside another body and releases behind its full length (1.0891ms)
+✔ physical alongside fixture keeps its lane instead of starting an early merge (13.11ms)
+✔ open-road lane occupancy is measured about the racing-line destination, not the displaced nose (1.0481ms)
+ℹ tests 68
+ℹ suites 0
+ℹ pass 66
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11971.5767
+
+✖ failing tests:
+
+test at test\nn.test.js:391:1
+✖ rocket blast attribution survives nested wheelOff and does not count a fly-by (4.6914ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(hit.damage>.09)
+  
+      at TestContext.<anonymous> (<repo>/test/nn.test.js:391:209)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test\nn.test.js:395:1
+✖ no-crates grid pins measured checkpoints and retains the recovery requirement (9757.8472ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  6 !== 7
+  
+      at TestContext.<anonymous> (<repo>/test/nn.test.js:395:199)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 6,
+    expected: 7,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

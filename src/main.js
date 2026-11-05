@@ -17,8 +17,10 @@ import { createBrain } from './ai/index.js';
 import { buildStage } from './render/stage.js';
 import { createCarVisual, crumple, retireCarVisual, syncCarVisual } from './render/carModel.js';
 import { Effects } from './render/effects.js';
+import { ArsenalView } from './render/arsenalView.js';
 import { Director } from './render/director.js';
 import { Audio } from './render/audio.js';
+import { WEAPONS } from './sim/arsenal.js';
 import { Hud } from './ui/hud.js';
 
 const canvas = document.getElementById('view');
@@ -28,6 +30,9 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
+
+const FINISH_BEAT_SECONDS = 1.2;
+const RESULTS_SECONDS = 22;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(50, 1, 0.3, 2000);
@@ -63,6 +68,7 @@ composer.addPass(new OutputPass());
 const track = getTrack();
 let stage = null;
 let effects = null;
+let arsenalView = null;
 const director = new Director(camera, track);
 const audio = new Audio();
 
@@ -90,7 +96,6 @@ const hud = new Hud({
     state.running = true;
     newRace();
   },
-  restart: () => newRace(),
   shot: (s) => {
     director.setManual(s);
     hud.setActive('[data-shot]', 'shot', s);
@@ -148,8 +153,11 @@ function clearVisuals() {
 
 function newRace() {
   clearTimeout(state.finishTimer);
+  arsenalView.reset(); // first: its blades are parented to the car visuals
   clearVisuals();
   effects.reset();
+  director.endFeature();
+  state.scene = null;
   setPaused(false);
   state.seed = (Math.random() * 1e9) | 0;
   state.brains = [];
@@ -242,6 +250,45 @@ function handleEvent(e, world) {
       effects.towed(e.x, e.y, e.z);
       state.visuals[e.car].root.visible = false;
       break;
+    case 'pickup':
+      effects.crateBurst(e.x, e.y, e.z);
+      audio.pickup(near(e.x, e.z));
+      break;
+    case 'fired': {
+      const key = WEAPONS[e.weapon].key;
+      const loudness = near(e.x, e.z);
+      if (key === 'foghorn') {
+        audio.foghorn(loudness);
+        arsenalView.horn(e.x, e.y, e.z);
+      } else if (key === 'threshingWhirl') audio.whirr(loudness);
+      else if (key === 'prizeBull') audio.moo(loudness);
+      else if (key === 'barnBurner' || key === 'grudgeSeeker' || key === 'repoHook') audio.launch(loudness);
+      else audio.clank(loudness);
+      break;
+    }
+    case 'blast':
+      effects.blast(e.x, e.y, e.z, e.radius);
+      audio.boom(near(e.x, e.z));
+      break;
+    case 'hooked':
+      audio.clank(near(e.x, e.z));
+      break;
+    case 'sprung':
+      effects.landing(e.x, e.y, e.z, 6);
+      audio.boing(near(e.x, e.z));
+      break;
+    case 'gored':
+      effects.impact(e.x, e.y + 0.6, e.z, 0, 0, 0.5, 0xb06a2c, 0xb06a2c);
+      audio.moo(near(e.x, e.z));
+      break;
+    case 'cut':
+      effects.impact(e.x, e.y, e.z, 0, 0, 0.45, 0x9aa0a6, 0x9aa0a6);
+      audio.clank(near(e.x, e.z));
+      break;
+    case 'pianoLands':
+      effects.pianoKeys(e.x, e.y, e.z);
+      audio.pianoCrash(near(e.x, e.z));
+      break;
     case 'go':
       hud.announce('Go', 900);
       break;
@@ -253,6 +300,33 @@ function handleEvent(e, world) {
   }
   hud.onEvent(e, world);
   director.onEvent(e, world);
+}
+
+// A beat on the finish, the winner's scene, then straight into the next race.
+function runScene(scene, world, dt) {
+  if (scene.beat > 0) {
+    scene.beat -= dt;
+    return;
+  }
+  if (!scene.shown) {
+    scene.shown = true;
+    director.feature(world.winner);
+    hud.setNextRace(Math.ceil(scene.left));
+    hud.showFinish(world);
+    audio.cheer(1);
+  }
+  scene.left -= dt;
+  if (scene.left <= 0) {
+    newRace();
+    return;
+  }
+  hud.setNextRace(Math.ceil(scene.left));
+  const winner = world.cars[world.winner];
+  scene.confetti -= dt;
+  if (winner && scene.confetti <= 0) {
+    scene.confetti = 0.22;
+    effects.confetti(winner.px, winner.py, winner.pz);
+  }
 }
 
 let last = performance.now();
@@ -296,6 +370,7 @@ function frame(now) {
         hud.announce(String(c), 800);
       }
     }
+    arsenalView.sync(world, state.visuals, fxDt, now / 1000);
     effects.update(fxDt);
     const camPos = director.update(realDt, world, state.visuals, telemetryOf);
     stage.update(state.visuals[director.subject].root.position);
@@ -314,13 +389,16 @@ function frame(now) {
     }
     if (world.phase === 'finished' && !state.announcedFinish) {
       state.announcedFinish = true;
-      // Behind the title card the races just keep coming.
-      state.finishTimer = setTimeout(() => {
-        if (state.world !== world) return;
-        if (state.running) hud.showFinish(world);
-        else newRace();
-      }, state.running ? 1200 : 4000);
+      if (state.running) {
+        state.scene = { beat: FINISH_BEAT_SECONDS, left: RESULTS_SECONDS, shown: false, confetti: 0 };
+      } else {
+        // Behind the title card the races just keep coming.
+        state.finishTimer = setTimeout(() => {
+          if (state.world === world) newRace();
+        }, 4000);
+      }
     }
+    if (state.scene && !state.paused) runScene(state.scene, world, realDt);
   }
   composer.render(realDt);
 }
@@ -362,6 +440,7 @@ async function boot() {
   }
   stage = buildStage(scene, track);
   effects = new Effects(scene, track, renderer);
+  arsenalView = new ArsenalView(scene, track, effects);
   resize();
   newRace();
   director.cut('heli', 0, -1);
@@ -371,4 +450,4 @@ async function boot() {
 }
 boot();
 
-window.__grudge = { state, director, get world() { return state.world; }, renderer };
+window.__grudge = { state, director, audio, get world() { return state.world; }, renderer };

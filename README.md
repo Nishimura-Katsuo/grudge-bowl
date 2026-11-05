@@ -1,6 +1,6 @@
 # Grudge Bowl
 
-A three-lap race at last light on a road tied through itself, driven by twelve furious bots. You watch. Each bot's brain is a recurrent neural network whose weights were derived by hand and assigned directly: nothing was trained.
+A five-lap race at last light on a road tied through itself, driven by twelve furious bots. You watch. Each bot's brain is a recurrent neural network whose weights were derived by hand and assigned directly: nothing was trained.
 
 **[Watch a race](https://nishimura-katsuo.github.io/grudge-bowl/)**
 
@@ -15,7 +15,7 @@ npm start         # builds and serves http://localhost:5178
 npm test          # physics and network tests
 ```
 
-The build is one self-contained file that also works opened straight from disk.
+`dist/` holds the page and its music, and works opened straight from disk.
 
 ## Watching
 
@@ -23,7 +23,11 @@ The Grudge Board is the running order. Click a name to follow that bot. Red yarn
 
 ## Rules
 
-Twelve cars, three laps of the Knot, a 1152 m closed road with three level crossroads, each passed twice a lap. First car to finish wins and the rest are ranked by distance covered. A car is out when its health reaches zero, it loses three wheels, it stays on its roof or side for 4.5 seconds, or it gains no ground for 12 seconds. Wrecks stay on the road for 7 seconds, then they are towed.
+Prize crates on the road hold eleven weapons, from the Barn Burner rocket and the Grudge Seeker, which hunts whoever hit you last, to the Prize Bull and the Grand Piano. `docs/BOT_CONTRACT.md` lists them all.
+
+Races run back to back. The winner gets about 20 seconds of burnouts, confetti and a few words, then the next race starts on its own.
+
+Twelve cars, five laps of the Knot, a 1152 m closed road with three level crossroads, each passed twice a lap. First car to finish wins and the rest are ranked by distance covered. A car is out when its health reaches zero, it loses three wheels, it stays on its roof or side for 4.5 seconds, or it gains no ground for 12 seconds. Wrecks stay on the road for 7 seconds, then they are towed.
 
 Three jumps make the trouble worse. Hump launches out of a hairpin, where exit speeds differ most, so a quick car comes down on a slow one. Dropkick lands on the third crossroads, into whoever is crossing it. Pancake funnels traffic into one lane and lands it in the braking zone for the tightest hairpin on the track.
 

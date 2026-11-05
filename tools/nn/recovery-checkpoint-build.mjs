@@ -1,0 +1,194 @@
+// Directly assigned racing circuits. No fitting or parameter search.
+import { writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { OBS } from '../../src/sim/sensors.js';
+import { Circuit } from './circuits.mjs';
+import { arms, hazard } from './arms.mjs';
+import { recovery } from './recovery-checkpoint-source.mjs';
+import { traffic } from './traffic.mjs';
+import { crates } from './crates.mjs';
+export function construct() {
+  const states=[...Array.from({length:11},(_,k)=>`memory.grudge${k}`),'memory.rage','memory.stuck','memory.escape','memory.gear','memory.turn','memory.passOffset','memory.recover','memory.turning','memory.phaseSlow','memory.routeDebt','memory.legTime','memory.leanClock','memory.neutralOffset','memory.displayRage','memory.previousPosition','memory.weaponAge','memory.settle','memory.previousFwd','memory.previousRight','memory.hazardOffset','memory.oilSteer','memory.oilThrottle',...Array.from({length:11},(_,k)=>`memory.target${k}`)];
+  states.push('memory.crateOffset','memory.crossGrace','memory.trafficFlight');
+  const c=new Circuit([...OBS.names,...states]),i=n=>c.names.get(n),e=n=>i('ego.'+n),o=(k,n)=>i(`opp${k}.${n}`);
+  const zero=c.affine('zero',[],0),not=(n,x)=>c.affine(n,[[x,-1]],1);
+  const speed=c.abs('speed',e('speedFwd')),slip=c.abs('slip',e('slipAngle'));
+  const horizontal=c.unit('horizontalSpeed',[[c.unit('horizontalF2',[[e('speedFwd'),1]],0,'square'),1],[c.unit('horizontalR2',[[e('speedRight'),1]],0,'square'),1]],0,'sqrt');
+  const ground=c.step('ground',[[e('wheelsDown'),1]],-.125),lip=c.step('lip',[[e('toJump'),-1]],8/120);
+  const jumpSettleDistance=c.max('jumpSettleDistance',horizontal,c.affine('jumpSettleMinimum',[],25/40));
+  const away=c.step('awayFromJump',[[e('toJump'),120],[jumpSettleDistance,-40]]);
+  const vengeance=c.affine('vengeance',[[e('temperVengeance'),1.5]],.5);
+  const grudges=Array.from({length:11},(_,k)=>c.clip(`grudge${k}`,[[i(`memory.grudge${k}`),2**(-1/540)],[c.mul(`grudgeHit${k}`,o(k,'hitMe'),vengeance),1]]));
+  const rage=c.clip('rage',[[i('memory.rage'),2**(-1/180)],[e('hitTaken'),.65],[e('stallTimer'),.008]]);
+  const weapon=arms(c,{i,e,o,ground,slip,grudges,rage});
+  const trafficControl=traffic(c,{i,e,o,ground,horizontal});
+  const eligible=[],rivals=[],occupied=[[],[]];
+  const half=c.affine('halfWidthMetres',[[e('halfWidth'),10]]),line=c.mul('lineRoadPosition',c.affine('lineRoadFraction',[[e('trackOffset'),1],[e('lineOffset'),-1]]),half);
+  const low=c.affine('passLower',[[half,-1],[line,-1]],1.6),high=c.affine('passUpper',[[half,1],[line,-1]],-1.6);
+  const earlyRange=c.max('passEarlyRange',c.affine('passTimeRange',[[horizontal,50]]),c.affine('passRangeFloor',[],30));
+  const passRange=c.mux('passRange',trafficControl.open,earlyRange,c.affine('legacyPassRange',[],30),120);
+  const committed=c.step('passCommitted',[[c.abs('previousPassMagnitude',i('memory.passOffset')),1]],-.25);
+  const passNeed=[],mergeBodies=[],roadOccupied=[[],[]];
+  const egoLine=c.mul('mergeEgoLine',e('lineOffset'),half);
+  const mergeLow=c.affine('mergeLow',[[c.relu('mergeNegative',[[egoLine,-1]]),-1]],-1.25);
+  const mergeHigh=c.affine('mergeHigh',[[c.relu('mergePositive',[[egoLine,1]]),1]],1.25);
+  const laneEnds=[-3,3].map((target,s)=>{
+    const hi=c.max(`passSweep${s}.hi`,egoLine,c.affine(`passSweep${s}.target`,[],target));
+    const lo=c.affine(`passSweep${s}.lo`,[[egoLine,1],[hi,-1]],target);
+    return {lo,hi};
+  });
+  const scores=Array.from({length:11},(_,k)=>{
+    const relevant=c.max(`traffic${k}.directionRelevant`,not(`traffic${k}.wreck`,o(k,'alive')),c.step(`traffic${k}.parallel`,[[o(k,'headingCos'),1]],-.5));
+    const belowPace=c.step(`traffic${k}.belowPace`,[[e('pace'),.9],[e('speedFwd'),-1],[o(k,'relVelFwd'),-1]],-.025);
+    const lapped=c.step(`traffic${k}.lapped`,[[o(k,'raceGap'),-1]],-.5);
+    const continuePass=c.and(`traffic${k}.continuePass`,[trafficControl.open,belowPace,c.max(`traffic${k}.committedOrLapped`,committed,lapped)]);
+    const needed=c.max(`traffic${k}.needed`,c.max(`traffic${k}.movingNeed`,continuePass,c.step(`traffic${k}.slower`,[[o(k,'relVelFwd'),-1]],-.025)),not(`traffic${k}.isWreck`,o(k,'alive')));passNeed.push(needed);
+    const valid=c.and(`traffic${k}.valid`,[o(k,'solid'),o(k,'los'),c.step(`traffic${k}.ahead`,[[o(k,'fwd'),1]],-.015),c.step(`traffic${k}.lane`,[[c.abs(`traffic${k}.right`,o(k,'right')),-1]],.035),needed,c.step(`traffic${k}.near`,[[o(k,'dist'),-100],[passRange,1]]),relevant]);
+    const roadFwd=c.affine(`merge${k}.forward`,[[c.mul(`merge${k}.fCos`,o(k,'fwd'),e('headingCos')),100],[c.mul(`merge${k}.rSin`,o(k,'right'),e('headingSin')),100]]);
+    const roadRight=c.affine(`merge${k}.position`,[[egoLine,1],[c.mul(`merge${k}.rCos`,o(k,'right'),e('headingCos')),100],[c.mul(`merge${k}.fSin`,o(k,'fwd'),e('headingSin')),-100]]);
+    mergeBodies.push(c.and(`merge${k}.body`,[o(k,'solid'),c.step(`merge${k}.alongside`,[[c.abs(`merge${k}.aheadAbs`,roadFwd),-1]],6),c.step(`merge${k}.low`,[[roadRight,1],[mergeLow,-1]]),c.step(`merge${k}.high`,[[mergeHigh,1],[roadRight,-1]])]));
+    const occupiedForward=c.and(`roadOccupancy${k}.longitudinal`,[c.step(`roadOccupancy${k}.ahead`,[[roadFwd,1]],6),c.step(`roadOccupancy${k}.near`,[[roadFwd,-1]],18)]);
+    for(let s=0;s<2;s++){
+      const lane=c.and(`roadLane${s}.${k}.destination`,[occupiedForward,c.step(`roadLane${s}.${k}.width`,[[c.abs(`roadLane${s}.${k}.delta`,c.affine(`roadLane${s}.${k}.position`,[[roadRight,1]],s?-3:3)),-1]],2.5)]);
+      const sweep=c.and(`roadLane${s}.${k}.sweep`,[occupiedForward,c.step(`roadLane${s}.${k}.alongside`,[[roadFwd,-1]],2),c.step(`roadLane${s}.${k}.low`,[[roadRight,1],[laneEnds[s].lo,-1]],1.25),c.step(`roadLane${s}.${k}.high`,[[laneEnds[s].hi,1],[roadRight,-1]],1.25)]);
+      roadOccupied[s].push(c.and(`roadLane${s}.${k}.solid`,[o(k,'solid'),c.max(`roadLane${s}.${k}.body`,lane,sweep)]));
+    }
+    eligible.push(valid);
+    rivals.push(c.max(`traffic${k}.rival`,c.step(`traffic${k}.raceClose`,[[c.abs(`traffic${k}.gap`,o(k,'raceGap')),-1]],.12),c.step(`traffic${k}.grudgeClose`,[[grudges[k],1]],-.1)));
+    for(let s=0;s<2;s++) occupied[s].push(c.and(`lane${s}.${k}.blocked`,[o(k,'solid'),c.step(`lane${s}.${k}.ahead`,[[o(k,'fwd'),1]],.04),c.step(`lane${s}.${k}.near`,[[o(k,'fwd'),-1]],.18),c.step(`lane${s}.${k}.overlap`,[[c.abs(`lane${s}.${k}.across`,c.affine(`lane${s}.${k}.delta`,[[o(k,'right'),1]],s?-.03:.03)),-1]],.025)]));
+    return c.affine(`traffic${k}.score`,[[valid,4],[o(k,'dist'),-1]],-4);
+  });
+  const winners=c.wta('trafficWinner',scores),targets=winners.map((w,k)=>c.and(`target${k}`,[w,eligible[k]]));
+  const exists=c.affine('trafficExists',targets.map(t=>[t,1]));
+  const select=n=>c.affine('selected.'+n,targets.map((t,k)=>[c.gate(`select.${n}.${k}`,o(k,n),t,1.5),1]));
+  const fwd=select('fwd'),right=select('right'),dist=select('dist'),alive=select('alive'),rel=select('relVelFwd');
+  const grudge=c.affine('selectedGrudge',targets.map((t,k)=>[c.gate(`selectGrudge${k}`,grudges[k],t,1),1]));
+  const rival=c.affine('selectedRival',targets.map((t,k)=>[c.gate(`selectRival${k}`,rivals[k],t,1),1]));
+  const notOpen=not('notOpenRoad',trafficControl.open);
+  const passingOccupied=occupied.map((lane,s)=>lane.map((old,k)=>c.max(`passingLane${s}.${k}`,c.and(`passingLane${s}.${k}.road`,[trafficControl.open,roadOccupied[s][k]]),c.and(`passingLane${s}.${k}.legacy`,[notOpen,old]))));
+  const laneClear=[0,1].map(s=>c.and(`leanLane${s}`,[c.step(`leanOccupancy${s}`,passingOccupied[s].map(x=>[x,-1]),.5),c.step(`leanRoad${s}`,[[s?high:low,s?1:-1]],-3),c.step(`leanRay${s}`,[[i(s?'ray3':'ray4'),1]],-12/45)]));
+  const side=c.wta('passSide',[0,1].map(s=>c.affine(`lane${s}.score`,[[c.gate(`lane${s}.freePriority`,laneClear[s],trafficControl.open,1),4],[i(s?'ray3':'ray4'),1],...passingOccupied[s].map(x=>[x,-2])],s?0:.01)));
+  const direction=c.affine('passDirection',[[side[0],-1],[side[1],1]]);
+  const pass=c.and('passing',[exists,away,c.step('passAhead',[[fwd,1]],-.015),c.step('passLane',[[c.abs('targetRight',right),-1]],.035),c.affine('passNeeded',targets.map((t,k)=>[c.gate(`selectedNeed${k}`,passNeed[k],t,1),1]))]);
+  const aggression=c.clip('aggression',[[e('temperAggression'),.5],[rage,.2],[grudge,.3]]);
+  const {stuck,timer,gear,turn,active,turning,noMotion,reverse,signedTurn,braking,debt,legTime}=recovery(c,{i,e,o,ground,direction,settleReady:weapon.settleReady});
+  const clearance=c.affine('leanClearance',side.map((x,s)=>[c.gate(`chosenLeanLane${s}`,laneClear[s],x,1),1]));
+  const safeLean=c.and('leanSafe',[ground,not('leanOutsideRecovery',active),not('leanNotShifting',braking),c.step('leanAligned',[[e('headingCos'),1]],-Math.cos(Math.PI/12)),c.step('leanLowSlip',[[slip,-1]],.1),clearance]);
+  const allowed=c.and('leanAllowed',[c.max('crossElbowOnly',c.names.get('crossContactZone'),c.step('crossElbowGrace',[[trafficControl.grace,1]],-1e-9)),pass,alive,rival,away,safeLean,c.step('contactRange',[[dist,-1]],.10),c.step('leanTemper',[[aggression,1]],-.35)]);
+  // One half-second elbow in a 4.5 s cycle: a bounded pulse and four-second rest.
+  const start=c.and('leanStart',[allowed,c.step('leanReady',[[i('memory.leanClock'),-1]])]);
+  const leanClock=c.mux('leanClock',start,c.affine('leanPeriod',[],4.5),c.clip('leanCountdown',[[i('memory.leanClock'),1]],-1/30,0,4.5),4.5);
+  const lean=c.and('leaning',[allowed,c.step('leanPulse',[[leanClock,1]],-4-1e-9)]);
+  const width=c.affine('passWidth',[[c.gate('elbow',aggression,lean,1),-.6]],3);
+  const freePass=c.and('freePass',[pass,clearance]);
+  const targetLine=c.affine('passTargetLine',[[direction,3]]);
+  const politeRequest=c.gate('politePassRequest',targetLine,freePass,128);
+  const returnBlocked=c.and('returnBlocked',[trafficControl.open,committed,c.step('mergeBodyPresent',mergeBodies.map(x=>[x,1]),-.5)]);
+  const requested=c.mux('requestedOffset',returnBlocked,i('memory.passOffset'),c.mux('newPassRequest',trafficControl.open,politeRequest,c.gate('legacyPassRequest',c.mul('passSigned',direction,width),pass,3),128),128);
+  const offset=c.affine('passOffset',[[i('memory.passOffset'),1-1/7.5],[requested,1/7.5]]);
+  const neutral=c.affine('neutralOffset',[[i('memory.neutralOffset'),1-1/7.5],[c.mux('neutralRequest',returnBlocked,i('memory.neutralOffset'),c.mux('newNeutralRequest',trafficControl.open,politeRequest,c.gate('legacyNeutralRequest',c.affine('neutralSigned',[[direction,3]]),pass,3),128),128),1/7.5]]);
+  const bound=(name,x)=>c.affine(name,[[low,1],[c.relu(name+'.aboveLow',[[x,1],[low,-1]]),1],[c.relu(name+'.aboveHigh',[[x,1],[high,-1]]),-1]]);
+  const danger=hazard(c,{i,e,ground,active,away,low,high,half});
+  const ordinaryOffset=c.mux('ordinaryOffset',lean,offset,neutral,128);
+  const pickup=crates(c,{i,e,ground,active,away,slip,pass,danger,half,low,high,neutral,occupied});
+  const crateOrPassing=c.mux('crateOrPassing',pickup.seek,pickup.safe,ordinaryOffset,100);
+  const effectiveOffset=c.mux('effectiveOffset',danger.avoid,danger.offset,crateOrPassing,100);
+  const bounded=bound('boundedOffset',effectiveOffset),neutralBounded=bound('boundedNeutral',neutral);
+  // One second of spatial preview, continuously interpolated. The old jumps
+  // from 28 to 45 to 65 m cut across the tight exits at the new corner speeds.
+  const preview=c.clip('previewMetres',[[horizontal,40]],0,16,65);
+  const look=n=>{
+    let x=i('look1.'+n);
+    const ds=[16,28,45,65],terms=[[x,1]];
+    for(let k=0;k<3;k++){
+      const ramp=c.clip(`lookRamp.${n}.${k}`,[[preview,1/(ds[k+1]-ds[k])]],-ds[k]/(ds[k+1]-ds[k]));
+      const delta=c.affine(`lookDelta.${n}.${k}`,[[i(`look${k+2}.${n}`),1],[i(`look${k+1}.${n}`),-1]]);
+      terms.push([c.mul(`lookSegment.${n}.${k}`,ramp,delta),1]);
+    }
+    return c.affine(`look.${n}.2`,terms);
+  };
+  // Crates offset the ordinary racing preview; shortening it hides the next
+  // corner's turn-in. Only a safety-critical hazard gets a short waypoint.
+  const normalX=look('fwd'),normalR=look('right'),normalY=c.affine('normalAimRight',[[normalR,1],[bounded,1/70]]);
+  const pickupY=c.mux('pickupAimRight',pickup.seek,normalR,normalY,3);
+  const hazardU=c.max('hazardAimFloor',c.affine('hazardAimDistance',[[danger.roadForward,1/70]],-(6+2.45)/70),c.affine('hazardAimMinimum',[],4/70));
+  const hazardV=c.affine('hazardAimRoadRight',[[bounded,1/70],[danger.egoLine,-1/70]]);
+  const hazardX=c.affine('hazardAimForward',[[c.mul('hazardAimUCos',hazardU,e('headingCos')),1],[c.mul('hazardAimVSin',hazardV,e('headingSin')),-1]]);
+  const hazardY=c.affine('hazardAimRight',[[c.mul('hazardAimUSin',hazardU,e('headingSin')),1],[c.mul('hazardAimVCos',hazardV,e('headingCos')),1]]);
+  const x=c.mux('aimForward',danger.avoid,hazardX,normalX,1.5),y=c.mux('aimRight',danger.avoid,hazardY,pickupY,3);
+  const r2=c.affine('aimRadius2',[[c.unit('aimX2',[[x,1]],0,'square'),1],[c.unit('aimY2',[[y,1]],0,'square'),1]]);
+  const den=c.max('aimDen',r2,c.affine('radiusFloor',[],(4/70)**2));
+  const baselineCurvature=c.affine('pursuitBaseCurvature',[[c.mul('pursuitRatio',y,c.unit('aimInverse',[[den,1]],0,'reciprocal')),2/70]]);
+  // Keep the normal corner preview. Replace only its return-to-line component
+  // with a finite-distance lane change, using only spare lateral grip.
+  const crateError=c.affine('crateLaneError',[[pickup.safe,1],[pickup.egoLine,-1]]);
+  const crateHorizon=c.max('crateHorizon',pickup.distance,c.affine('crateHorizonFloor',[],16));
+  const crateDen=c.affine('crateLaneDen',[[c.unit('crateHorizon2',[[crateHorizon,1]],0,'square'),1],[c.unit('crateError2',[[crateError,1]],0,'square'),1]]);
+  const crateShort=c.affine('crateLaneCurvature',[[c.mul('crateErrorRatio',crateError,c.unit('crateLaneInverse',[[crateDen,1]],0,'reciprocal')),2]]);
+  const cancelReturn=c.affine('crateCancelReturn',[[c.mul('crateReturnRatio',pickup.egoLine,c.unit('crateLongInverse',[[den,4900]],0,'reciprocal')),2]]);
+  const correction=c.mul('crateCorrection',c.affine('crateCorrectionRoad',[[crateShort,1],[cancelReturn,1]]),e('headingCos'));
+  const velocity2=c.max('crateVelocityFloor',c.affine('crateVelocity2',[[c.unit('crateVF2',[[e('speedFwd'),1]],0,'square'),1600],[c.unit('crateVR2',[[e('speedRight'),1]],0,'square'),1600]]),c.affine('crateMinimumV2',[],25));
+  const capacity=c.mul('crateGripCurvature',c.affine('crateLateralGrip',[[e('surfaceGrip'),1.5*9.81]]),c.unit('crateSpeedInverse',[[velocity2,1]],0,'reciprocal'));
+  const budget=c.relu('crateCurvatureBudget',[[capacity,1],[c.abs('crateBaseLoad',baselineCurvature),-1]]);
+  const limitedCorrection=c.affine('crateLimitedCorrection',[[budget,-1],[c.relu('crateCorrectionLow',[[correction,1],[budget,1]]),1],[c.relu('crateCorrectionHigh',[[correction,1],[budget,-1]]),-1]]);
+  const curvature=c.affine('pursuitCurvature',[[baselineCurvature,1],[c.gate('crateAppliedCurvature',limitedCorrection,pickup.seek,1),1]]);
+  const wheel=c.unit('pursuitWheel',[[curvature,2.85]],0,'atan');
+  const yaw=c.mul('expectedYaw',curvature,c.affine('velocityYawUnits',[[e('speedFwd'),40/3]]));
+  // Correct the whole velocity/nose angle at the front axle, in wheel radians.
+  // Its yaw velocity lever is 1.45/v seconds; floor v for low-speed turns.
+  const steeringSpeed=c.max('steeringSpeedFloor',horizontal,c.affine('steeringMinimumSpeed',[],6/40));
+  const yawTime=c.affine('frontAxleYawTime',[[c.unit('steeringSpeedInverse',[[steeringSpeed,1]],0,'reciprocal'),1.45*3/(40*.6)]]);
+  const yawFeedback=c.mul('frontAxleYawFeedback',yawTime,c.affine('yawError',[[yaw,1],[e('yawRate'),-1]]));
+  const follow=c.affine('followingSteer',[[wheel,1.25/.6],[e('slipAngle'),1/.6],[yawFeedback,1]]);
+  const sign=c.affine('turnSign',[[c.step('routeRight',[[y,1]]),2]],-1);
+  const raceSteer=c.mux('raceSteer',c.step('routeBehind',[[x,-1]]),c.affine('turnAround',[[sign,.7]]),follow,12);
+  // Preserve the racing line's 2.6 m wall margin after contact displaces a car.
+  const wall=c.affine('wallReflex',[[c.relu('wallLeft',[[i('ray8'),-1]],2.6/45),4],[c.relu('wallRight',[[i('ray7'),-1]],2.6/45),-4]]);
+  const roadSteer=c.affine('roadSteer',[[raceSteer,1],[wall,1]]);
+  const normal=c.mux('jumpSteer',lip,c.clip('lipSteer',[[roadSteer,1]],0,-.18,.18),roadSteer,12);
+  const steerDemand=c.mux('steerChoice',active,signedTurn,normal,12);
+  const drySteer=c.clip('drySteer',[[c.gate('groundSteer',steerDemand,ground,12),1],[e('alignment'),-1/3]],0,-1,1);
+  const oilSteer=c.clip('oilSteer',[[i('memory.oilSteer'),1],[c.clip('oilSteerStep',[[drySteer,1],[i('memory.oilSteer'),-1]],0,-.04,.04),1]],0,-.25,.25);
+  const oilCruise=c.and('oilCruise',[i('arms.oiled'),not('oilNotRecovering',active)]);
+  const steer=c.gate('steer',c.mux('surfaceSteer',oilCruise,oilSteer,drySteer,1),not('notWhirlingSteer',i('arms.whirling')),1);
+  const crossing=c.clip('crossingNear',[[e('toCrossing'),-120/12]],1);
+  const lift=c.mul('crossingLift',crossing,c.affine('crossingCaution',[[e('temperNerve'),-.012]],.012));
+  const share=c.affine('paceShare',[[lift,-1],[i('arms.blinded'),-.08],[i('arms.oiled'),-.5]],.9);
+  const freeDesired=c.mul('freeDesiredSpeed',e('pace'),share);
+  const trafficLimit=c.mux('recoveryTrafficLimit',active,c.affine('recoveryUnlimited',[],1.5),trafficControl.speedLimit,1.5);
+  const desired=c.affine('desiredSpeed',[[freeDesired,1],[c.relu('trafficSpeedReduction',[[freeDesired,1],[trafficLimit,-1]]),-1]]),error=c.affine('speedError',[[desired,1],[horizontal,-1]]);
+  // v dv/ds = d(v²)/2ds. The eight-metre note gives braking feed-forward;
+  // feedback corrects force-model error instead of needing overspeed first.
+  const futureDesired=c.mul('previewPace',i('look0.pace'),share);
+  const deceleration=c.relu('paceDeceleration',[[c.unit('desiredSpeed2',[[desired,1]],0,'square'),100],[c.unit('futureDesired2',[[futureDesired,1]],0,'square'),-100]]);
+  const grip=c.max('physicalGrip',c.affine('decodedGrip',[[e('surfaceGrip'),2]]),c.affine('gripFloor',[],.2));
+  const brakingFeedforward=c.clip('brakingFeedforward',[[c.mul('paceBrakeRatio',deceleration,c.unit('gripInverse',[[grip,9.81]],0,'reciprocal')),1]]);
+  const raceBrake=c.clip('overspeed',[[error,-14],[brakingFeedforward,1]]);
+  // At full lock, atan((1.4/2.85)*tan(.6)) = .324 rad is ordinary
+  // kinematic sideslip. It must not choke a low-speed drive-out.
+  const fastSlipGrip=c.clip('fastSlipGrip',[[c.relu('slipExcess',[[slip,1]],-.10),-6]],1);
+  const slipAuthority=c.clip('slipAuthority',[[c.unit('slipSpeedF2',[[e('speedFwd'),1]],0,'square'),50],[c.unit('slipSpeedR2',[[e('speedRight'),1]],0,'square'),50]],-.125);
+  const slipGrip=c.affine('slipGrip',[[c.mul('slipReduction',slipAuthority,not('slipLoss',fastSlipGrip)),-1]],1);
+  const spinGrip=c.clip('spinGrip',[[c.relu('spinExcess',[[e('rearSlip'),1]],-.12),-5]],1);
+  const drag=c.unit('dragSpeed2',[[e('speedFwd'),1]],0,'square');
+  const drive=c.mul('tractionThrottle',c.gate('positiveDemand',c.clip('throttleDemand',[[error,20],[drag,.15]],.04),c.and('belowPace',[c.step('positiveSpeedError',[[error,1]]),c.step('noRaceBrake',[[raceBrake,-1]])]),1),c.mul('tractionFactors',slipGrip,spinGrip));
+  // Full lock at 2.5 m/s needs ~1.5 m/s² at a 4.2 m radius, below oil's
+  // .2 g grip budget. Dry recovery retains its existing 4 m/s cap.
+  const recoverySpeed=c.mul('recoverySurfaceSpeed',speed,c.affine('recoveryOilScale',[[i('arms.oiled'),.6]],1));
+  const dryThrottle=c.gate('dryThrottle',c.mux('recoveryThrottle',active,c.clip('recoveryPower',[[recoverySpeed,-20]],2,0,.8),drive,1),not('notBraking',braking),1);
+  const dryBrake=c.gate('dryBrake',c.mux('brakeChoice',braking,c.affine('shiftBrake',[],.7),c.mux('movingBrake',active,c.clip('recoveryOverspeed',[[recoverySpeed,14]],-1.4),raceBrake,1),1),ground,1);
+  const oilThrottle=c.clip('oilThrottle',[[c.affine('oilThrottleBound',[[dryThrottle,1],[c.relu('oilThrottleRise',[[dryThrottle,1],[i('memory.oilThrottle'),-1]],-.08),-1]]),1]],0,0,.35);
+  const throttle=c.mux('throttle',i('arms.oiled'),oilThrottle,dryThrottle,1);
+  const brake=c.gate('brake',c.mux('oilBrakeChoice',i('arms.oiled'),c.clip('oilBrake',[[dryBrake,1]],0,0,.2),dryBrake,1),not('notWhirlingBrake',i('arms.whirling')),1);
+  const drift=c.and('sliding',[c.step('slipVisible',[[slip,1]],-Math.PI/18),c.step('moving',[[c.unit('visibleF2',[[e('speedFwd'),1]],0,'square'),1],[c.unit('visibleR2',[[e('speedRight'),1]],0,'square'),1]],-((6/40)**2))]);
+  const activeLean=c.and('activeLean',[lean,not('leanNotHazard',danger.avoid),c.step('effectiveNarrowing',[[c.abs('neutralMagnitude',neutralBounded),1],[c.abs('actualMagnitude',bounded),-1]],-.01),not('leanRouteAhead',c.names.get('routeBehind')),c.step('leanSteerUnclipped',[[c.abs('leanSteerMagnitude',roadSteer),-1]],.98)]);
+  // Show contact and lost places without changing any driving consumer of rage.
+  let contact=e('hitTaken');for(let k=0;k<11;k++)contact=c.max(`displayContact${k}`,contact,o(k,'iHit'));
+  const lost=c.gate('lostPlaces',c.relu('rankLoss',[[e('racePosition'),11],[i('memory.previousPosition'),-11]]),e('raceActive'),11);
+  const displayRage=c.clip('displayRage',[[i('memory.displayRage'),2**(-1/240)],[contact,2.5],[lost,.2]]);
+  const shownRage=c.max('shownRage',rage,displayRage);
+  const displayTargets=targets.map((t,k)=>c.mux(`displayTarget${k}`,exists,c.and(`visibleTarget${k}`,[t,o(k,'alive')]),c.gate(`rememberTarget${k}`,i(`memory.target${k}`),not(`targetNotObserved${k}`,o(k,'solid')),1),1));
+  return c.compile({observationCount:OBS.size,paceShare:.9,actions:[steer,throttle,brake,zero,reverse,weapon.fire],stateOutputs:[...grudges,rage,stuck,timer,gear,turn,offset,active,turning,noMotion,debt,legTime,leanClock,neutral,displayRage,e('racePosition'),weapon.ageNext,weapon.settle,e('speedFwd'),e('speedRight'),danger.offset,steer,throttle,...displayTargets,pickup.offset,trafficControl.grace,trafficControl.flight],targets:displayTargets,
+    modes:[c.affine('mode.hunt',[[activeLean,2]]),c.affine('mode.race',[],.5),c.affine('mode.drift',[[drift,3]]),c.affine('mode.unstick',[[active,4]])],rageOutput:[shownRage],grudgeOutputs:grudges,crossingOutput:[crossing]});
+}
+if(process.argv[1]===fileURLToPath(import.meta.url))writeFileSync(new URL('./recovery-checkpoint.json',import.meta.url),JSON.stringify(construct())+'\n');

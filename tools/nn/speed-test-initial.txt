@@ -1,0 +1,160 @@
+✔ crate interpolation, coordinates, temperament and distance ramp match independent expressions (21.3145ms)
+✔ crate clearance follows the filtered target side, including reset and opposite-history transients (0.9459ms)
+✔ crate reach cone matches its speed-dependent expression and rejects disappearing late targets (12.0378ms)
+✔ crates yield to weapons, passing, hazards, recovery, walls, jumps, slip and corner pace (3.1207ms)
+✖ an empty car physically detours and collects an off-line crate; a held weapon leaves its normal trajectory unchanged (435.9417ms)
+✖ crate lane correction preserves corner preview and spends only spare surface grip (1.1106ms)
+✔ lead-change measurement retains the incumbent at quantized ties (0.4158ms)
+✔ rebuild is byte identical, finite, strictly layered and uses the new contract (16.4362ms)
+✔ gates, muxes, products and clamps match independent expressions at bounds and random interiors (2.3195ms)
+✔ comparators, Boolean AND and WTA have deterministic ties (0.4401ms)
+✔ eleven-way traffic WTA matches independent argmax on negative scores, near ties and random interiors (2.1607ms)
+✔ all grudge memories and rage follow the stated leak equations (17.5402ms)
+✖ pursuit and speed-selected lookahead match bicycle equations at switching boundaries (1.1031ms)
+✔ zero towed slots are absent; wrecks at any heading are passed but never displayed as targets (0.4648ms)
+✔ passing picks the free side, stays inside the road and smoothly returns (2.9498ms)
+✔ aggression only narrows a nearby passing gap, ignores backmarkers without grudge, never changes speed or gear (0.464ms)
+✔ jump approach suppresses passing, lip limits steer, and airborne wheels receive no brake (0.3029ms)
+✔ at racing speed traction envelopes decrease with wheelspin and large body slip (1.1469ms)
+✔ low-speed slip authority follows lateral load at 2–6 m/s in every horizontal direction (5.0975ms)
+✔ a nose-wall reverse actually travels backwards and turns toward the route (39.4989ms)
+✔ clear aligned or oblique launches never accumulate stuck time, even with stale stall evidence (16.3598ms)
+✔ recovery requires sustained blockage, releases with clearance hysteresis, and clears all control latches (0.8557ms)
+✔ a forward-moving car does not newly reverse into traffic (4.1277ms)
+✔ backward recovery uses opposite full locks, pauses phase time while shifting, and finishes only at a good heading (9.9352ms)
+✔ rear walls select a forward turn and genuine no-motion changes the failed leg (1.1219ms)
+✔ recovery geometry uses solid slots and projected widths; zero slots do not block (1.1307ms)
+✔ alignment compensation applies after recovery steering, including reverse (0.3292ms)
+✔ fixed physical open-road and wall cases regain forward travel without repeated latch cycles (166.463ms)
+✔ aggression ablation clamps grudges from decision zero and compares matching car-laps (2.9897ms)
+✔ act reuses its output and telemetry has stable car IDs (0.4721ms)
+✔ unarmed solo driving regression completes three laps below 50 seconds (231.1569ms)
+✔ a full grid progresses and records actual credited damage (1026.4681ms)
+✔ rear-quarter traffic cannot mask a forward wreck, but still occupies its passing lane (0.3114ms)
+✔ post-collision stale lock is reconsidered and moving route loss has a leg deadline (2.4049ms)
+✔ aggressive narrowing has safety gates, a half-second pulse and four-second rest (11.0477ms)
+✔ telemetry reports effective grounded narrowing and horizontal drift (0.7024ms)
+✔ display rage responds to contact and lost places with no path to driving or its recurrent state (6.6929ms)
+✔ route-loss deadline preserves an engaged turn that reduces heading error, but never exempts a failed shift (12.774ms)
+✔ soft deadlines retain opportunity and posture, with grounded hard expiry at nineteen seconds (3.929ms)
+✔ weapon temperament changes timing, aim range, grudge restraint and defensive threat threshold (6.669ms)
+✔ hidden slots preserve remembered identity and leaking grudges without creating a zero-distance obstacle (0.3956ms)
+✔ whirl, airborne and abrupt throws clear recovery and keep it inhibited during settling (0.7591ms)
+✔ oil limits inputs and hazard offsets stay inside available road (2.285ms)
+✔ credited weapon damage reaches rage and the correct fixed-slot grudge (0.6016ms)
+✔ absent tail range cannot become a tactical drop at maximum aggression and rage (0.3712ms)
+✔ each weapon class takes its intended tactical opportunity after pickup delay (4.4007ms)
+✔ fixed mine encounter detours clear with road margin (6.3772ms)
+✔ settling exception permits urgent real obstruction but preserves forced-motion protection (1.9133ms)
+✔ hazards rotate from nose to road and the selected waypoint rotates back (1.9135ms)
+✖ rocket corridor rejects a three-metre miss and relative lateral interception failures (0.525ms)
+✔ rocket blast attribution survives nested wheelOff and does not count a fly-by (2.6057ms)
+✔ physical oil encounter clears its full body corridor (6.5704ms)
+✖ no-crates grid preserves the measured baseline gap rather than concealing it (12298.3121ms)
+✔ hard expiry clock fires targetless only at nineteen seconds and never while airborne (33.7903ms)
+✔ rocket matching and interception have no graph path into driving actions (1.0199ms)
+ℹ tests 55
+ℹ suites 0
+ℹ pass 50
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14581.5011
+
+✖ failing tests:
+
+test at test\nn.test.js:82:1
+✖ an empty car physically detours and collects an off-line crate; a held weapon leaves its normal trajectory unchanged (435.9417ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (test/nn.test.js:84:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test\nn.test.js:87:1
+✖ crate lane correction preserves corner preview and spends only spare surface grip (1.1106ms)
+  AssertionError [ERR_ASSERTION]: 0.28571428855260206 != 0.4000000059604645
+      at close (test/nn.test.js:29:36)
+      at TestContext.<anonymous> (test/nn.test.js:93:51)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test\nn.test.js:113:1
+✖ pursuit and speed-selected lookahead match bicycle equations at switching boundaries (1.1031ms)
+  AssertionError [ERR_ASSERTION]: 0.021224984162916728 != 0.010478518506658355
+      at close (test/nn.test.js:29:36)
+      at TestContext.<anonymous> (test/nn.test.js:113:478)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test\nn.test.js:349:1
+✖ rocket corridor rejects a three-metre miss and relative lateral interception failures (0.525ms)
+  AssertionError [ERR_ASSERTION]: 0.28913044774012064 != 0.4290322772918209
+      at close (test/nn.test.js:29:36)
+      at TestContext.<anonymous> (test/nn.test.js:350:482)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test\nn.test.js:357:1
+✖ no-crates grid preserves the measured baseline gap rather than concealing it (12298.3121ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  3 !== 1
+  
+      at TestContext.<anonymous> (test/nn.test.js:357:198)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 3,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

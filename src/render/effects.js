@@ -31,6 +31,8 @@ const SOFT_FRAG = `
     if (gl_FragColor.a < 0.004) discard;
   }`;
 
+const CONFETTI = [[0.75, 0.05, 0.03], [0.9, 0.55, 0.03], [0.04, 0.3, 0.3], [0.95, 0.85, 0.6]];
+
 class ParticlePool {
   constructor(scene, capacity, additive, look) {
     this.capacity = capacity;
@@ -511,6 +513,111 @@ export class Effects {
         x + r.range(-1.5, 1.5), y, z + r.range(-1.5, 1.5),
         r.range(-1, 1), r.range(0.4, 1.8), r.range(-1, 1),
         r.range(1.2, 2.2), r.range(1, 1.8), 0.3, 0.27, 0.25, 0.3, 1.6, 1,
+      );
+    }
+  }
+
+  // A weapon going off. Bigger than a crash, smaller than a car dying.
+  blast(x, y, z, radius) {
+    const r = this.rng;
+    const k = clamp(radius / 7, 0.5, 1.4);
+    for (let i = 0; i < 16; i++) {
+      this.glow.spawn(
+        x + r.range(-1, 1), y + r.range(0, 1), z + r.range(-1, 1),
+        r.range(-4, 4) * k, r.range(1, 6) * k, r.range(-4, 4) * k,
+        r.range(1.2, 2.8) * k, r.range(0.3, 0.7), 1.3, r.range(0.4, 0.7), 0.1, 0.24, 2.6, 2,
+      );
+    }
+    for (let i = 0; i < 18; i++) {
+      this.soft.spawn(
+        x, y + 0.4, z,
+        r.range(-4, 4), r.range(1, 6), r.range(-4, 4),
+        r.range(1.8, 3.4) * k, r.range(1.4, 3), 0.12, 0.11, 0.1, 0.6, 2.4, 1.2,
+      );
+    }
+    for (let i = 0; i < 50; i++) {
+      const sp = r.range(6, 24), a = r() * Math.PI * 2;
+      this.sparks.spawn(x, y + 0.4, z, Math.cos(a) * sp, r.range(2, 16), Math.sin(a) * sp, r.range(0.3, 0.9));
+    }
+    for (let i = 0; i < 5; i++) {
+      this.debris.spawn(x, y + 0.4, z, r.range(-8, 8), r.range(4, 12), r.range(-8, 8), r.range(0.15, 0.5), 0.05, r.range(0.15, 0.4), 0x2a2622);
+    }
+    this.flash.fire(x, y, z, 34, 0.32, 0xff8030);
+  }
+
+  exhaust(x, y, z, dt, scale) {
+    const r = this.rng;
+    this.exhaustAccum = (this.exhaustAccum ?? 0) + dt * 70;
+    while (this.exhaustAccum >= 1) {
+      this.exhaustAccum -= 1;
+      this.soft.spawn(x, y, z, r.range(-0.4, 0.4), r.range(0, 0.8), r.range(-0.4, 0.4), 0.5 * scale, r.range(0.5, 1.1), 0.55, 0.52, 0.5, 0.42, 1.8, 0.6);
+      this.glow.spawn(x, y, z, 0, 0, 0, 0.7 * scale, 0.16, 1.5, 0.75, 0.25, 0.5, 1);
+    }
+  }
+
+  hoofDust(x, y, z, dt) {
+    const r = this.rng;
+    this.hoofAccum = (this.hoofAccum ?? 0) + dt * 40;
+    while (this.hoofAccum >= 1) {
+      this.hoofAccum -= 1;
+      this.soft.spawn(x + r.range(-1.4, 1.4), y + 0.2, z + r.range(-1.4, 1.4), r.range(-1, 1), r.range(0.3, 1.4), r.range(-1, 1), 1.1, r.range(0.7, 1.4), 0.62, 0.42, 0.28, 0.3, 1.8, 1);
+    }
+  }
+
+  // A wall of smoke: as dense as the bots find it. Thins as it runs out.
+  smokeCloud(x, y, z, radius, dt, share) {
+    const r = this.rng;
+    this.smokeAccum = (this.smokeAccum ?? 0) + dt * 46 * Math.min(1, share * 2.5);
+    while (this.smokeAccum >= 1) {
+      this.smokeAccum -= 1;
+      const a = r() * Math.PI * 2, reach = Math.sqrt(r()) * radius * 0.92;
+      this.soft.spawn(
+        x + Math.cos(a) * reach, y + r.range(0.4, 4.5), z + Math.sin(a) * reach,
+        r.range(-0.4, 0.4), r.range(0, 0.5), r.range(-0.4, 0.4),
+        r.range(4.5, 7), r.range(1.8, 2.8), 0.56, 0.54, 0.52, 0.62, 1.4, 0.4,
+      );
+    }
+  }
+
+  bladeSparks(car, dt) {
+    const r = this.rng;
+    this.bladeAccum = (this.bladeAccum ?? 0) + dt * 90;
+    while (this.bladeAccum >= 1) {
+      this.bladeAccum -= 1;
+      const a = r() * Math.PI * 2;
+      this.sparks.spawn(car.px + Math.cos(a) * 3.6, car.py + 0.1, car.pz + Math.sin(a) * 3.6, Math.cos(a) * 12, r.range(0, 5), Math.sin(a) * 12, 0.3);
+    }
+  }
+
+  // The keys go everywhere.
+  pianoKeys(x, y, z) {
+    const r = this.rng;
+    for (let i = 0; i < 26; i++) {
+      this.debris.spawn(x, y + 0.5, z, r.range(-11, 11), r.range(3, 13), r.range(-11, 11), 0.42, 0.06, 0.14, i % 3 ? 0xf3e2bd : 0x0b0b0e);
+    }
+  }
+
+  // A crate going off in a shower of its own stripes.
+  crateBurst(x, y, z) {
+    const r = this.rng;
+    for (let i = 0; i < 26; i++) {
+      const [cr, cg, cb] = CONFETTI[i % 2 ? 0 : 1];
+      const a = r() * Math.PI * 2, sp = r.range(3, 9);
+      this.soft.spawn(x, y, z, Math.cos(a) * sp, r.range(1, 7), Math.sin(a) * sp, r.range(0.2, 0.36), r.range(0.5, 1.1), cr, cg, cb, 1, 0, 1.4, 5);
+    }
+    this.glow.spawn(x, y, z, 0, 0, 0, 3.2, 0.16, 1.5, 1, 0.45, 0.7, 7);
+  }
+
+  // Paper thrown from the stands, drifting down around the winner.
+  confetti(x, y, z) {
+    const r = this.rng;
+    for (let i = 0; i < 16; i++) {
+      const [cr, cg, cb] = CONFETTI[Math.floor(r() * CONFETTI.length)];
+      const a = r() * Math.PI * 2, reach = r.range(1, 8);
+      this.soft.spawn(
+        x + Math.cos(a) * reach, y + r.range(4, 9), z + Math.sin(a) * reach,
+        r.range(-2, 2), r.range(-1, 1.5), r.range(-2, 2),
+        r.range(0.14, 0.24), r.range(2.4, 3.8), cr, cg, cb, 1, 0, 1.2, 1.6,
       );
     }
   }

@@ -1,0 +1,77 @@
+[{"label":"Aggression 0: rocket, rival 15 m ahead","seconds":1.5},{"label":"Aggression 1: rocket, rival 15 m ahead","seconds":0.7666666666666667},{"label":"Vengeance 0: grudge at rear quarter","seconds":0.7666666666666667},{"label":"Vengeance 1: grudge at rear quarter","seconds":3.7666666666666666},{"label":"Nerve 0: Foghorn, incoming=.75","seconds":0.03333333333333333},{"label":"Nerve 1: Foghorn, incoming=.75","seconds":19},{"label":"Initial driving rage 0: rocket, rival 35 m ahead","seconds":19},{"label":"Initial driving rage 1: rocket, rival 35 m ahead","seconds":0.8666666666666667}]
+aheadRange": 0.15,
+      "ego.temperAggression": 1,
+      "ego.temperVengeance": 0,
+      "opp0.solid": 1,
+      "opp0.alive": 1,
+      "opp0.fwd": -0.1,
+      "opp0.right": 0.1,
+      "opp0.dist": 0.15
+    },
+    "memory": {
+      "grudge0": 1
+    }
+  },
+  {
+    "label": "Vengeance 1: grudge at rear quarter",
+    "seconds": 3.7666666666666666,
+    "values": {
+      "arms.barnBurner": 1,
+      "arms.aheadRange": 0.15,
+      "ego.temperAggression": 1,
+      "ego.temperVengeance": 1,
+      "opp0.solid": 1,
+      "opp0.alive": 1,
+      "opp0.fwd": -0.1,
+      "opp0.right": 0.1,
+      "opp0.dist": 0.15
+    },
+    "memory": {
+      "grudge0": 1
+    }
+  },
+  {
+    "label": "Nerve 0: Foghorn, incoming=.75",
+    "seconds": 0.03333333333333333,
+    "values": {
+      "arms.foghorn": 1,
+      "arms.incoming": 0.75,
+      "ego.temperNerve": 0
+    },
+    "memory": {}
+  },
+  {
+    "label": "Nerve 1: Foghorn, incoming=.75",
+    "seconds": 19,
+    "values": {
+      "arms.foghorn": 1,
+      "arms.incoming": 0.75,
+      "ego.temperNerve": 1
+    },
+    "memory": {}
+  },
+  {
+    "label": "Initial driving rage 0: rocket, rival 35 m ahead",
+    "seconds": 19,
+    "values": {
+      "arms.barnBurner": 1,
+      "arms.aheadRange": 0.35,
+      "ego.temperAggression": 0.5
+    },
+    "memory": {
+      "rage": 0
+    }
+  },
+  {
+    "label": "Initial driving rage 1: rocket, rival 35 m ahead",
+    "seconds": 0.8666666666666667,
+    "values": {
+      "arms.barnBurner": 1,
+      "arms.aheadRange": 0.35,
+      "ego.temperAggression": 0.5
+    },
+    "memory": {
+      "rage": 1
+    }
+  }
+]

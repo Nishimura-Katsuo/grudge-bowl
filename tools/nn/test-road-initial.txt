@@ -1,0 +1,170 @@
+✔ crate interpolation, coordinates, temperament and distance ramp match independent expressions (18.6397ms)
+✔ crate clearance follows the filtered target side, including reset and opposite-history transients (0.9196ms)
+✔ crate reach cone matches its speed-dependent expression and rejects disappearing late targets (13.0965ms)
+✔ crates yield to weapons, passing, hazards, recovery, walls, jumps, slip and corner pace (3.7337ms)
+✔ an empty car physically detours and collects an off-line crate; a held weapon leaves its normal trajectory unchanged (404.2776ms)
+✔ crate lane correction preserves corner preview and spends only spare surface grip (1.6253ms)
+✔ lead-change measurement retains the incumbent at quantized ties (0.2069ms)
+✖ rebuild is byte identical, finite, strictly layered and uses the new contract (12.7954ms)
+✔ gates, muxes, products and clamps match independent expressions at bounds and random interiors (2.0875ms)
+✔ comparators, Boolean AND and WTA have deterministic ties (0.6074ms)
+✔ eleven-way traffic WTA matches independent argmax on negative scores, near ties and random interiors (2.3962ms)
+✔ all grudge memories and rage follow the stated leak equations (15.4026ms)
+✔ continuous one-second preview and pursuit match geometry at boundaries and high speeds (3.5381ms)
+✔ horizontal speed and front-axle compensation match independent vector geometry (2.3404ms)
+✔ pace-note braking anticipates deceleration and never brakes airborne (1.3777ms)
+✔ larger front-axle steering range cannot leak through airborne or recovery gates (0.3455ms)
+✔ fast approaches preserve one second to settle for jumps and 1.5 seconds to acquire crates (0.5599ms)
+✔ zero towed slots are absent; wrecks at any heading are passed but never displayed as targets (0.4076ms)
+✔ passing picks the free side, stays inside the road and smoothly returns (2.5223ms)
+✖ aggression only narrows a nearby passing gap, ignores backmarkers without grudge, never changes speed or gear (0.4321ms)
+✔ jump approach suppresses passing, lip limits steer, and airborne wheels receive no brake (0.2922ms)
+✔ at racing speed traction envelopes decrease with wheelspin and large body slip (1.0595ms)
+✔ low-speed slip authority follows lateral load at 2–6 m/s in every horizontal direction (4.2294ms)
+✔ a nose-wall reverse actually travels backwards and turns toward the route (35.5123ms)
+✔ clear aligned or oblique launches never accumulate stuck time, even with stale stall evidence (20.7423ms)
+✔ recovery requires sustained blockage, releases with clearance hysteresis, and clears all control latches (1.073ms)
+✔ a forward-moving car does not newly reverse into traffic (4.1495ms)
+✔ backward recovery uses opposite full locks, pauses phase time while shifting, and finishes only at a good heading (17.0111ms)
+✔ rear walls select a forward turn and genuine no-motion changes the failed leg (1.2516ms)
+✔ recovery geometry uses solid slots and projected widths; zero slots do not block (1.2004ms)
+✔ alignment compensation applies after recovery steering, including reverse (0.2324ms)
+✔ fixed physical open-road and wall cases regain forward travel without repeated latch cycles (175.6748ms)
+✔ aggression ablation clamps grudges from decision zero and compares matching car-laps (2.3017ms)
+✔ act reuses its output and telemetry has stable car IDs (0.2494ms)
+✔ unarmed fast-car regression completes three laps below 37 seconds without stops (364.1949ms)
+✔ a full grid progresses and records actual credited damage (963.31ms)
+✔ rear-quarter traffic cannot mask a forward wreck, but still occupies its passing lane (0.3022ms)
+✔ post-collision stale lock is reconsidered and moving route loss has a leg deadline (2.2208ms)
+✖ aggressive narrowing has safety gates, a half-second pulse and four-second rest (13.7208ms)
+✖ telemetry reports effective grounded narrowing and horizontal drift (0.6216ms)
+✔ display rage responds to contact and lost places with no path to driving or its recurrent state (6.8176ms)
+✔ route-loss deadline preserves an engaged turn that reduces heading error, but never exempts a failed shift (7.1036ms)
+✔ soft deadlines retain opportunity and posture, with grounded hard expiry at nineteen seconds (3.2533ms)
+✔ weapon temperament changes timing, aim range, grudge restraint and defensive threat threshold (6.7076ms)
+✔ hidden slots preserve remembered identity and leaking grudges without creating a zero-distance obstacle (0.3541ms)
+✔ whirl, airborne and abrupt throws clear recovery and keep it inhibited during settling (0.491ms)
+✔ oil limits inputs and hazard offsets stay inside available road (2.093ms)
+✔ credited weapon damage reaches rage and the correct fixed-slot grudge (0.5073ms)
+✔ absent tail range cannot become a tactical drop at maximum aggression and rage (0.2443ms)
+✔ each weapon class takes its intended tactical opportunity after pickup delay (1.7568ms)
+✔ fixed mine encounter detours clear with road margin (5.5608ms)
+✔ settling exception permits urgent real obstruction but preserves forced-motion protection (1.3969ms)
+✔ hazards rotate from nose to road and the selected waypoint rotates back (1.1113ms)
+✔ rocket corridor rejects a three-metre miss and relative lateral interception failures (0.6928ms)
+✔ rocket blast attribution survives nested wheelOff and does not count a fly-by (1.7761ms)
+✔ physical oil encounter clears its full body corridor (5.7747ms)
+✖ no-crates grid pins measured checkpoints and retains the recovery requirement (12469.7473ms)
+✔ hard expiry clock fires targetless only at nineteen seconds and never while airborne (31.1706ms)
+✔ rocket matching and interception have no graph path into driving actions (0.9296ms)
+ℹ tests 59
+ℹ suites 0
+ℹ pass 54
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14762.3189
+
+✖ failing tests:
+
+test at test\nn.test.js:103:1
+✖ rebuild is byte identical, finite, strictly layered and uses the new contract (12.7954ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  46 !== 45
+  
+      at TestContext.<anonymous> (<repo>/test/nn.test.js:103:160)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 46,
+    expected: 45,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test\nn.test.js:157:1
+✖ aggression only narrows a nearby passing gap, ignores backmarkers without grudge, never changes speed or gear (0.4321ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (<repo>/test/nn.test.js:157:237)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test\nn.test.js:291:1
+✖ aggressive narrowing has safety gates, a half-second pulse and four-second rest (13.7208ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(ticks>=30&&ticks<=45)
+  
+      at TestContext.<anonymous> (<repo>/test/nn.test.js:295:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test\nn.test.js:298:1
+✖ telemetry reports effective grounded narrowing and horizontal drift (0.6216ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  'race' !== 'hunt'
+  
+      at TestContext.<anonymous> (<repo>/test/nn.test.js:302:56)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'race',
+    expected: 'hunt',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test\nn.test.js:395:1
+✖ no-crates grid pins measured checkpoints and retains the recovery requirement (12469.7473ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  9 !== 5
+  
+      at TestContext.<anonymous> (<repo>/test/nn.test.js:395:199)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 9,
+    expected: 5,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

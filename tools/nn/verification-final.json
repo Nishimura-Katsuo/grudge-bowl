@@ -1,26 +1,16 @@
 {
-  "reviewDelta": {
-    "baselineWeightSha256": "995a99fe632b396140e1a52b1f709d7750d7427ae136cad972be6258e6e4f9f1",
-    "addedRows": [
-      "headingYawAgreement",
-      "headingYawAgreement.diff2",
-      "headingYawAgreement.sum2",
-      "headingYawNonPositive",
-      "headingYawPositive",
-      "routeTurnNotImproving",
-      "turnImproving"
-    ],
-    "changedRows": [
-      "routeFailed"
-    ]
-  },
-  "simSha256": "08652b91cb4a60fd541ad6ae048eb3757730cee1c40a3dc02b74337e5b9085c1",
-  "weightSha256": "05f1327f7a280b27fe991fa7f4fef5998e4bc627b3c7ce672c5fd87f4b4633e8",
+  "simSha256": "0a60a94507980d902e180a4953bae030778c34502cb245e557b3b80386afd6f8",
+  "weightSha256": "ebd81dc2cb4cfe3292cb5b8311c67eba5aeb628934c9dffdb32789347bdd62ed",
   "byteIdentical": true,
+  "rejectedCheckpointsExact": true,
   "traceExact": true,
-  "traceFrames": 11,
-  "traceActivations": 704,
-  "testsPassed": 89,
-  "neuralTests": 32,
-  "browserBundleBytes": 94631
+  "traceFrames": 31,
+  "traceActivations": 3883,
+  "completeLapRows": 100,
+  "testsTotal": 172,
+  "testsPassed": 172,
+  "testsFailed": 0,
+  "fullSuitePassed": true,
+  "neuralTests": 71,
+  "browserBundleBytes": 229770
 }

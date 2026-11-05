@@ -26,12 +26,12 @@ export const CAR = {
   antiRollFront: 9000,
   antiRollRear: 5000,
   maxSteer: 0.6,
-  steerRate: 3.4, // rad/s at the road wheels
+  steerRate: 6.2, // rad/s at the road wheels
   dragArea: 0.56, // 0.5 * rho * Cd * A
   rollingResistance: 0.016,
-  brakeTorqueFront: 2300,
-  brakeTorqueRear: 1500,
-  handbrakeTorque: 4200,
+  brakeTorqueFront: 5600,
+  brakeTorqueRear: 3600,
+  handbrakeTorque: 9200,
 };
 
 export const TIRE = {
@@ -43,6 +43,9 @@ export const TIRE = {
   rearGrip: 1.05,
   loadReference: 3800,
   loadSensitivity: 0.09, // grip lost per unit of extra relative load
+  // Share of the height of a tyre's contact patch that its road forces lever the
+  // body through. These cars corner past 2 g, which would tip a real one over.
+  forceLever: 0.4,
   lowSpeedFloor: 2.0, // m/s, slip denominator floor
 };
 
@@ -50,7 +53,7 @@ export const ENGINE = {
   idleRpm: 900,
   limitRpm: 6100,
   stallRpm: 1900, // torque converter flash speed at light throttle
-  peakTorque: 520,
+  peakTorque: 1350,
   converterBoost: 1.15,
   gears: [1.55, 1.25, 1.02, 0.85],
   reverseGear: 2.0,
@@ -69,15 +72,16 @@ export const SURFACE = {
 };
 
 export const SURFACE_PROPS = [
-  { name: 'clay', grip: 1.0, drag: 0.012, dust: 1 },
-  { name: 'asphalt', grip: 1.14, drag: 0.0, dust: 0 },
-  { name: 'mud', grip: 0.62, drag: 0.075, dust: 0.4 },
+  { name: 'clay', grip: 2.3, drag: 0.012, dust: 1 },
+  { name: 'asphalt', grip: 2.6, drag: 0.0, dust: 0 },
+  { name: 'mud', grip: 1.77, drag: 0.03, dust: 0.4 },
 ];
 
 export const CONTACT = {
   carRestitution: 0.14,
   carFriction: 0.42,
   carContactLever: 0.3,
+  wallContactLever: 0.12,
   wallRestitution: 0.2,
   wallFriction: 0.34,
   groundRestitution: 0.1,
@@ -88,9 +92,9 @@ export const CONTACT = {
 };
 
 export const DAMAGE = {
-  deltaVThreshold: 1.2, // m/s absorbed per step before metal starts to complain
+  deltaVThreshold: 2, // m/s absorbed per step before metal starts to complain
   exponent: 1.3,
-  scale: 0.011,
+  scale: 0.00464,
   zoneMultiplier: { front: 0.5, side: 1.2, rear: 0.85 },
   wallMultiplier: 0.42,
   wheelHitScale: 1.5,
@@ -103,12 +107,30 @@ export const DAMAGE = {
 
 export const RULES = {
   countdown: 3,
-  laps: 3,
-  timeLimit: 210,
+  laps: 5,
+  timeLimit: 200,
   stalledKoSeconds: 12, // no route gained for this long and the marshals wave you off
   flippedKoSeconds: 4.5,
   wreckTowSeconds: 7, // wrecks stay on the road this long, then the tractor has them
   points: { damagePerUnit: 700, knockout: 300 },
+};
+
+export const ARSENAL = {
+  crateReach: 3.3,
+  crateHeight: 2.6, // a car this far above or below a crate passes it by
+  crateRespawn: 4,
+  fireLock: 0.5, // seconds before a fresh pickup can be used
+  rocket: { speed: 92, life: 1.6, hitReach: 2.3, radius: 7, push: 13, lift: 3.5, spin: 2, damage: 0.112 },
+  seeker: { speed: 66, life: 4, turn: 4.4, reach: 110, dive: 26, cruise: 6, hitReach: 2.4, radius: 6, push: 10, lift: 4.5, spin: 2.5, damage: 0.096 },
+  mine: { radius: 3.4, life: 26, arm: 0.7, push: 4, lift: 8, spin: 1.5, damage: 0.088 },
+  oil: { radius: 6, life: 13, grip: 0.2 },
+  smoke: { radius: 12, life: 8 },
+  whirl: { seconds: 1.3, turns: 2, grip: 0.14, reach: 4, height: 2.4, push: 11, lift: 2.5, damage: 0.072, cutEvery: 0.04, rehit: 0.45 },
+  hook: { speed: 130, life: 0.9, reach: 70, hitReach: 2.5, reel: 1.5, snug: 5.5, snap: 95, pullOwner: 30, pullVictim: 13, damage: 0.016 },
+  spring: { radius: 2.8, life: 24, arm: 0.5, launch: 13 },
+  bull: { speed: 82, life: 10, hitReach: 3, height: 2.6, gore: 12, goreLift: 5, goreDamage: 0.056, radius: 6, push: 14, lift: 6, spin: 3, damage: 0.136 },
+  piano: { fall: 1.7, radius: 5, push: 6, lift: -6, spin: 2, damage: 0.24 },
+  horn: { radius: 18, push: 15, lift: 3 },
 };
 
 // The Knot. Jumps and pinches hang off crossroads passes, numbered in route
@@ -127,11 +149,19 @@ export const TRACK = {
   jumps: [
     // Out of the Scrapyard hairpin, where exit speeds differ most: the quick car
     // flies further and comes down on the slow one.
-    { name: 'Hump', pass: 1, lipOffset: 253, ramp: 18, fall: 11, height: 1.75, airLength: 20, maxSpeed: 22 },
+    { name: 'Hump', pass: 1, lipOffset: 272, ramp: 18, fall: 11, height: 1.75, airLength: 20, maxSpeed: 27 },
     // Comes down on the third crossroads, into whoever is crossing it.
-    { name: 'Dropkick', pass: 2, lipOffset: -25, ramp: 18, fall: 11, height: 1.75, airLength: 26, maxSpeed: 29 },
+    { name: 'Dropkick', pass: 2, lipOffset: -25, ramp: 18, fall: 11, height: 1.75, airLength: 28, maxSpeed: 31 },
     // Comes down braking for the hairpin, so the next car lands on the last one.
-    { name: 'Pancake', pass: 5, lipOffset: 40, ramp: 18, fall: 11, height: 1.75, airLength: 24, maxSpeed: 31 },
+    { name: 'Pancake', pass: 5, lipOffset: 40, ramp: 18, fall: 11, height: 1.75, airLength: 46, maxSpeed: 42 },
+  ],
+  crates: [
+    { pass: 1, offset: 20 },
+    { pass: 1, offset: 130 },
+    { pass: 3, offset: 30 },
+    { pass: 3, offset: 165 },
+    { pass: 4, offset: -30 },
+    { pass: 5, offset: 190 },
   ],
   widthZones: [
     { pass: 5, offset: 42, halfWidth: 6.4, span: 34 }, // funnels traffic into one lane over the Pancake
@@ -146,7 +176,10 @@ export const TRACK = {
   ],
 };
 
-// Painted start/finish line: laps count from here, for every grid slot.
-export const START_LINE_S = 52;
+// Painted finish line on the back straight, ahead of the grid, so the first lap is
+// short and five laps fit the race clock. Laps count from here, for every grid slot.
+export const FINISH_LINE_S = 1030;
+// Painted start line, level with the front row of the grid.
+export const GRID_LINE_S = 52;
 
 export const CAR_COUNT = 12;

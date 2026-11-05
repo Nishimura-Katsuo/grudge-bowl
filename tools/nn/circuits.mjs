@@ -1,5 +1,5 @@
 // Construction-time compiler. No environment feedback or parameter fitting.
-export const ACTIVATIONS = ['linear', 'relu', 'step', 'square', 'atan', 'reciprocal'];
+export const ACTIVATIONS = ['linear', 'relu', 'step', 'square', 'atan', 'reciprocal', 'sqrt'];
 export class Circuit {
   constructor(inputs) { this.inputs = inputs; this.nodes = []; this.names = new Map(inputs.map((n, i) => [n, i])); }
   unit(name, terms = [], bias = 0, activation = 'linear') {

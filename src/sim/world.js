@@ -6,14 +6,20 @@ import { clamp, createRng } from './math.js';
 import { createCar, integratePosition, stepCarForces, storePrev } from './car.js';
 import { collideCars, collideGround, collideWall, damageFromImpulse } from './collision.js';
 import { fillObservation, OBS } from './sensors.js';
+import { collectCrates, createArsenal, fireWeapon, standDown, stepArsenal } from './arsenal.js';
 import { getTrack } from './track.js';
 import { ROSTER } from './roster.js';
 
-const SPAWN_LAST_ROW_S = -2;
-const ROW_GAP = 9;
+const SPAWN_LAST_ROW_S = -32;
+const ROW_GAP = 14;
 const COLUMN_OFFSET = 4.2;
 const STALL_RESET_METRES = 4; // route to gain before the stall clock starts again
 const MIN_FLIGHT_SECONDS = 0.28;
+const VICTORY_RUN_SECONDS = 2;
+const VICTORY_ENTRY_SPEED = 11;
+const VICTORY_THROTTLE = 1;
+const VICTORY_BOXED_SECONDS = 0.8;
+const VICTORY_BACK_SECONDS = 1.1;
 const LANDING_AIR_SECONDS = 0.12;
 const LANDING_HEIGHT = 0.25;
 const LANDING_DROP_SPEED = 1; // m/s closing downward, measured before the contact
@@ -59,6 +65,7 @@ export function createWorld(options = {}) {
     brains: [],
     obs: cars.map(() => new Float32Array(OBS.size)),
     leaderLaps: 0,
+    arsenal: createArsenal(track),
   };
   world.brains = brainFactory ? cars.map((car) => brainFactory(car)) : cars.map(() => null);
   return world;
@@ -86,7 +93,7 @@ function gridSpawn(track, s, side) {
   };
 }
 
-function emit(world, event) {
+export function emit(world, event) {
   event.time = world.time;
   world.events.push(event);
 }
@@ -149,13 +156,23 @@ function knockOut(world, car, reason) {
 }
 
 function creditHit(world, attacker, victim, damage, strength) {
-  if (!attacker.alive || !victim.alive) return;
+  // Health can reach zero a moment before the knockout: a later hit stole nothing.
+  if (!attacker.alive || !victim.alive || victim.health <= 0) return;
   attacker.damageDealt += damage;
   attacker.score += damage * RULES.points.damagePerUnit;
   victim.lastHitter = attacker.id;
   victim.lastHitterTime = world.time;
   attacker.hitTo[victim.id] = Math.max(attacker.hitTo[victim.id], strength);
   victim.hitFrom[attacker.id] = Math.max(victim.hitFrom[attacker.id], strength);
+}
+
+// A weapon's damage: credited like a hit, and it can finish a car off.
+export function weaponHit(world, attacker, victim, amount, x, z, strength) {
+  if (world.phase !== 'racing' || !victim.alive) return;
+  const dealt = Math.min(amount, victim.health);
+  if (attacker !== victim) creditHit(world, attacker, victim, dealt, strength);
+  victim.hitAny = Math.max(victim.hitAny, strength);
+  applyDamage(world, victim, amount, 'right', x, z);
 }
 
 const zoneOut = { zone: 'front' };
@@ -235,13 +252,56 @@ function runBrains(world) {
     inp.brake = clamp(action[2] || 0, 0, 1);
     inp.handbrake = clamp(action[3] || 0, 0, 1);
     inp.reverse = clamp(action[4] || 0, 0, 1);
-    if (world.phase !== 'racing') {
+    if (world.phase === 'racing') {
+      collectCrates(world, car);
+      if (action[5] > 0.5) fireWeapon(world, car);
+    }
+    if (world.phase === 'finished' && car.id === world.winner) {
+      celebrate(world, car, inp);
+    } else if (world.phase !== 'racing') {
       inp.throttle = 0;
       inp.brake = 1;
       inp.handbrake = 0;
       inp.reverse = 0;
     }
   }
+}
+
+// The winner's reward. The brain keeps driving long enough to clear the pack as
+// it stops, then the car burns a circle into the track on tired rear tyres.
+function celebrate(world, car, inp) {
+  if (world.time - world.flagTime < VICTORY_RUN_SECONDS) return;
+  inp.reverse = 0;
+  inp.handbrake = 0;
+  if (!car.burningOut && Math.hypot(car.vx, car.vz) > VICTORY_ENTRY_SPEED) {
+    inp.steer = 0;
+    inp.throttle = 0;
+    inp.brake = 0.8;
+    return;
+  }
+  car.burningOut = true;
+  inp.brake = 0;
+  // Boxed in by a wall or a parked rival: back out, then go round again.
+  if (world.time < car.backingUntil) {
+    inp.reverse = 1;
+    inp.steer = -1;
+    inp.throttle = VICTORY_THROTTLE * 0.7;
+    return;
+  }
+  // Still in reverse from backing out: stop first, or drive never engages.
+  if (car.gear < 0) {
+    inp.throttle = 0;
+    inp.brake = 1;
+    return;
+  }
+  const dt = STEPS_PER_DECISION * PHYSICS_DT;
+  car.boxedTime = Math.hypot(car.vx, car.vz) < 1 ? car.boxedTime + dt : 0;
+  if (car.boxedTime > VICTORY_BOXED_SECONDS) {
+    car.boxedTime = 0;
+    car.backingUntil = world.time + VICTORY_BACK_SECONDS;
+  }
+  inp.steer = 1;
+  inp.throttle = VICTORY_THROTTLE;
 }
 
 function updateProgress(world, car, dt) {
@@ -343,6 +403,8 @@ function updateRules(world, dt) {
 
 function finishRace(world, running) {
   world.phase = 'finished';
+  world.flagTime = world.time;
+  standDown(world);
   const order = rankCars(world);
   world.finishOrder = order.map((c) => c.id);
   order.forEach((c, i) => { c.finishPos = i + 1; });
@@ -373,6 +435,7 @@ export function stepWorld(world) {
   const cars = world.cars;
 
   if (world.step % STEPS_PER_DECISION === 0) runBrains(world);
+  stepArsenal(world, dt);
 
   for (let i = 0; i < cars.length; i++) {
     storePrev(cars[i]);

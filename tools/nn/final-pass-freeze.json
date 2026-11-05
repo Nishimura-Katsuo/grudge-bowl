@@ -1,0 +1,97 @@
+{
+  "time": "2026-11-05T02:16:59.167Z",
+  "weightSha256": "ebd81dc2cb4cfe3292cb5b8311c67eba5aeb628934c9dffdb32789347bdd62ed",
+  "simRevision": {
+    "sha256": "5d38edc9f4717dc91e5b8605d520e907f9ee7428e22cd02c096fee467b4c0c22",
+    "files": [
+      {
+        "name": "arsenal.js",
+        "sha256": "0c0311bca4b4fe0d2d878338bd353bdaaa4eeba9c57b903d8ce14311d99bbe4e",
+        "mtime": "2026-11-04T22:36:02.970Z"
+      },
+      {
+        "name": "car.js",
+        "sha256": "97a26957074c04b3b5197e31ee38706458afc819614ceb7a06b3bcea3f172993",
+        "mtime": "2026-11-04T22:33:38.681Z"
+      },
+      {
+        "name": "collision.js",
+        "sha256": "d28f2a0ad23819267a6bc4caed65ceba73d794c11e0a66d1d5a0d70532d1c49a",
+        "mtime": "2026-11-04T23:09:39.296Z"
+      },
+      {
+        "name": "config.js",
+        "sha256": "31e6dddd07dbf423c1fcdca185f788ece8cdb9979d153c405688ea9e7d2a7e44",
+        "mtime": "2026-11-05T02:02:15.672Z"
+      },
+      {
+        "name": "math.js",
+        "sha256": "5c1af1de1539d93e835673046a6ac5598e7e08fa9781784135227ac8744be426",
+        "mtime": "2026-11-04T04:35:09.807Z"
+      },
+      {
+        "name": "roster.js",
+        "sha256": "460c597eb96bb29883d1a30eb582dce266930b507045a8a376fe9217f15237c9",
+        "mtime": "2026-11-04T04:39:35.032Z"
+      },
+      {
+        "name": "sensors.js",
+        "sha256": "e2a573b2be240e8d8611dae1027af3675e78f4243ca6698fa01b9416fe9ecf11",
+        "mtime": "2026-11-04T22:46:37.443Z"
+      },
+      {
+        "name": "track.js",
+        "sha256": "6cb9881e608faa430bd5e94fca45e38ae4b19198c1ccaefbd046b29e57fd6a98",
+        "mtime": "2026-11-04T19:56:53.505Z"
+      },
+      {
+        "name": "world.js",
+        "sha256": "b3ab1f62c4b795315329500c64eaab92fd79deabdbf28ef6fc5ce102eba8bb77",
+        "mtime": "2026-11-05T01:07:32.444Z"
+      }
+    ]
+  },
+  "development": [
+    1,
+    7,
+    42,
+    1201,
+    1709,
+    2309,
+    2903,
+    3613,
+    4801,
+    6007,
+    6011,
+    6029,
+    6043,
+    6053,
+    6067,
+    6073,
+    6089,
+    6101,
+    6113,
+    6121,
+    8101,
+    8111,
+    8117,
+    8123,
+    8147,
+    8161,
+    8171,
+    8191
+  ],
+  "heldOut": [
+    9103,
+    9113,
+    9133,
+    9151,
+    9173,
+    9199,
+    9203,
+    9221,
+    9239,
+    9257
+  ],
+  "selection": "Retain applied-balance pass 2: recovery and single contact attempt each lose flag finishes. No further tuning."
+}

@@ -5,8 +5,14 @@
 import * as THREE from 'three';
 import { clamp, lerp } from '../sim/math.js';
 import { centreOfCrossroads, goreNoses } from './stage.js';
+import { WEAPON } from '../sim/arsenal.js';
 
-const SHOTS = ['chase', 'bumper', 'trackside', 'drone', 'tower', 'heli', 'wreck'];
+const SHOTS = ['chase', 'bumper', 'trackside', 'drone', 'tower', 'heli', 'wreck', 'victory'];
+
+const PIANO = WEAPON.grandPiano;
+const ORBIT_ROAD_CLEARANCE = 1.6;
+const ORBIT_SWINGS = [0];
+for (let k = 1; k <= 9; k++) ORBIT_SWINGS.push(k * 0.35, -k * 0.35);
 
 const v1 = new THREE.Vector3();
 const v2 = new THREE.Vector3();
@@ -51,6 +57,8 @@ export class Director {
     this.userPitch = 0;
     this.time = 0;
     this.lastHotHit = null;
+    this.victor = -1;
+    this.heldShot = null;
     this.wreckSite = new THREE.Vector3();
     this.heart = centreOfCrossroads(track);
     this.posts = this.buildPosts();
@@ -92,7 +100,28 @@ export class Director {
     return new THREE.Vector3(x, t.heightAt(x, z) + 1.5, z);
   }
 
+  // The race is over: everything points at the winner, whatever the camera was doing.
+  feature(id) {
+    this.victor = id;
+    this.heldShot = this.manualShot;
+    this.manualShot = null;
+    this.auto = true;
+    this.followHold = 0;
+    if (id >= 0) this.cut('victory', id, -1);
+  }
+
+  endFeature() {
+    if (this.victor < 0 && !this.heldShot) return;
+    this.victor = -1;
+    if (this.heldShot) {
+      this.manualShot = this.heldShot;
+      this.auto = false;
+    }
+    this.heldShot = null;
+  }
+
   setManual(shot) {
+    this.heldShot = null;
     this.manualShot = shot;
     this.auto = !shot;
     if (shot) this.cut(shot, this.subject, this.partner);
@@ -131,6 +160,31 @@ export class Director {
       this.cut('wreck', e.car, e.killer);
     }
     if (e.type === 'landing' && e.car === this.subject) this.shake(0.12 + e.drop * 0.05);
+    if (e.type === 'blast' && world.phase === 'racing') {
+      const d = Math.hypot(e.x - this.camPos.x, e.z - this.camPos.z);
+      if (d < 40) this.shake(0.5 * (1 - d / 40));
+    }
+    // A falling piano is worth a cut: stay on the car it's falling on.
+    if (e.type === 'fired' && e.target >= 0 && this.auto && !(this.followHold > 0) && e.weapon === PIANO && world.phase === 'racing') {
+      this.cut('drone', e.target, -1);
+    }
+  }
+
+  // The angle nearest the wanted one that keeps the camera on the road with a
+  // clear view of the subject. The road is narrower than the orbit is wide.
+  clearOrbitAngle(subj, wanted, r) {
+    const t = this.track;
+    for (const swing of ORBIT_SWINGS) {
+      const a = wanted + swing;
+      const x = subj.x + Math.cos(a) * r, z = subj.z + Math.sin(a) * r;
+      if (t.sdfAt(x, z) < ORBIT_ROAD_CLEARANCE) continue;
+      let clear = true;
+      for (let k = 0.25; k < 1 && clear; k += 0.25) {
+        clear = t.sdfAt(subj.x + (x - subj.x) * k, subj.z + (z - subj.z) * k) > 0.2;
+      }
+      if (clear) return a;
+    }
+    return wanted;
   }
 
   // Two or more cars about to go over the same lip is worth a cut on its own.
@@ -173,6 +227,8 @@ export class Director {
       s += hunters[i] * 0.45;
       if (c.racePos < 3) s += 0.5 - c.racePos * 0.15;
       if (c.airborne) s += 0.8;
+      if (c.whirl) s += 1.6;
+      if (c.gripScale < 0.5) s += 0.5;
       const r = c.wheels[2];
       s += clamp(r.slide / 10, 0, 1.3);
       for (let j = i + 1; j < cars.length; j++) {
@@ -238,7 +294,7 @@ export class Director {
   // whenever the sightline would otherwise run through it.
   keepLensClear(pos, look, shot) {
     const t = this.track;
-    const roving = shot === 'chase' || shot === 'bumper' || shot === 'wreck' || shot === 'grid';
+    const roving = shot === 'chase' || shot === 'bumper' || shot === 'wreck' || shot === 'grid' || shot === 'victory';
     if (roving) {
       const margin = 0.9;
       const sdf = t.sdfAt(pos.x, pos.z);
@@ -272,10 +328,7 @@ export class Director {
       this.scanTimer = 0.25;
       this.scan(world, telemetryOf);
     }
-    // Once it's over, the last shot of the night belongs to the winner.
-    if (this.auto && world.phase === 'finished' && world.winner >= 0 && this.subject !== world.winner && this.shotAge > 3.2) {
-      this.cut('drone', world.winner, -1);
-    }
+    if (this.auto && this.victor >= 0 && this.shot !== 'victory') this.cut('victory', this.victor, -1);
 
     if (world.cars[this.subject].towed) {
       const next = world.cars.find((c) => c.alive);
@@ -389,6 +442,20 @@ export class Director {
         this.targetFov = 42;
         posRate = 2.5;
         lookRate = 2.5;
+        break;
+      }
+      case 'victory': {
+        // A slow low orbit, aimed below the car so it sits high in the frame, in the
+        // gap between the winner's name and the results.
+        const r = 8 + Math.sin(this.shotAge * 0.31) * 1.2;
+        const a = this.clearOrbitAngle(subj, this.orbit + this.shotAge * 0.26 + this.userYaw, r);
+        const cx = Math.cos(a), cz = Math.sin(a);
+        desiredPos.set(subj.x + cx * r, subj.y + 2.1 + this.userPitch * 8, subj.z + cz * r);
+        const aside = this.camera.aspect > 1.2 ? 0.7 : 0;
+        desiredLook.set(subj.x + cz * aside, subj.y - 1, subj.z - cx * aside);
+        this.targetFov = 42;
+        posRate = 4;
+        lookRate = 5;
         break;
       }
       case 'wreck': {

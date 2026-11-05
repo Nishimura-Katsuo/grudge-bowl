@@ -400,6 +400,17 @@ function buildTrack() {
     }
   }
 
+  // Three prize crates across the road at each spot.
+  const crateSpots = TRACK.crates.map((c) => {
+    const s = routeTo(0, passes[c.pass].s + c.offset, length);
+    const i = Math.round(s / step) % n;
+    const crates = [-0.6, 0, 0.6].map((share) => ({
+      x: px[i] - tz[i] * hw[i] * share,
+      z: pz[i] + tx[i] * hw[i] * share,
+    }));
+    return { s, crates };
+  });
+
   const line = racingLine(centre, hw);
   // Grip as the tyres will meet it on the line, mud included.
   const surfaceGrip = new Float64Array(n);
@@ -412,13 +423,13 @@ function buildTrack() {
   const polys = traceWalls(sdf, gridNx, gridNz, minX, minZ, CELL);
 
   return new Track({
-    centre, polys, sdf, heights, surface, crossings, passes, jumps, mud, line, pace, hw,
+    centre, polys, sdf, heights, surface, crossings, passes, jumps, mud, line, pace, hw, crateSpots,
     grid: { minX, minZ, maxX, maxZ, gridNx, gridNz, hNx, hNz },
   });
 }
 
 export class Track {
-  constructor({ centre, polys, sdf, heights, surface, crossings, passes, jumps, mud, line, pace, hw, grid }) {
+  constructor({ centre, polys, sdf, heights, surface, crossings, passes, jumps, mud, line, pace, hw, crateSpots, grid }) {
     this.centre = centre;
     this.length = centre.length;
     this.polys = polys;
@@ -432,6 +443,7 @@ export class Track {
     this.line = line;
     this.pace = pace;
     this.hw = hw;
+    this.crateSpots = crateSpots;
     this.grid = grid;
     this.bounds = { minX: grid.minX, minZ: grid.minZ, maxX: grid.maxX, maxZ: grid.maxZ };
   }
