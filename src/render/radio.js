@@ -1,7 +1,8 @@
-// The soundtrack: Suno's own player, one song at a time, in shuffled order forever.
+// The soundtrack: Suno's own player, with a fresh song from a shuffled deck for each
+// race. Songs outlast a race, so the timer only matters if the game sits paused.
 // Suno has no playlist embed and its player is cross-origin, so the page can't see
-// inside it or hear from it. Songs are changed on a timer from their known lengths,
-// and volume and pause are out of reach. Stopping a song means removing the player.
+// inside it or hear from it, and volume and pause are out of reach. Stopping a song
+// means removing the player.
 // If Suno can't be reached, the track bundled with the game loops until it can.
 
 const PLAYER = 'https://suno.com/embed/';
@@ -65,7 +66,12 @@ export class Radio {
       // Blocked, or the file is missing. The race runs regardless.
     });
     if (this.muted) this.backup.pause();
-    else this.next();
+  }
+
+  // The first race after Start is the first song. The race behind the title screen
+  // gets nothing, because nobody has clicked anything yet.
+  newRace() {
+    if (this.started && !this.muted) this.next();
   }
 
   pick() {

@@ -167,6 +167,10 @@ export class Audio {
     return source;
   }
 
+  newRace() {
+    this.radio.newRace();
+  }
+
   setMuted(m) {
     this.muted = m;
     this.radio.setMuted(m);

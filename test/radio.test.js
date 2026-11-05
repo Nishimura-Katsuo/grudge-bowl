@@ -65,6 +65,7 @@ test('starts an autoplaying player, and the next song follows when this one ends
   try {
     const { radio, host, backup, frames } = rig();
     radio.start();
+    radio.newRace();
     await flush();
     assert.equal(host.children.length, 1);
     assert.match(frames[0].src, /^https:\/\/suno\.com\/embed\/.+\?autoplay=1$/);
@@ -89,6 +90,7 @@ test('with Suno out of reach the bundled track plays, and it can be heard', asyn
   try {
     const { radio, host, backup, frames } = rig({ online: false });
     radio.start();
+    radio.newRace();
     await flush();
     assert.equal(frames.length, 0);
     assert.equal(host.children.length, 0);
@@ -105,6 +107,7 @@ test('a player that never loads hands over to the bundled track', async () => {
   try {
     const { radio, host, backup } = rig();
     radio.start();
+    radio.newRace();
     await flush();
     mock.timers.tick(10100);
     assert.equal(radio.onBackup, true);
@@ -121,6 +124,7 @@ test('losing Suno between songs hands over too', async () => {
   try {
     const { radio, frames, net } = rig();
     radio.start();
+    radio.newRace();
     await flush();
     frames[0].load();
     net.online = false;
@@ -137,6 +141,7 @@ test('the backup is temporary: the playlist comes back once Suno does', async ()
   try {
     const { radio, backup, frames, net } = rig({ online: false });
     radio.start();
+    radio.newRace();
     await flush();
     assert.equal(radio.onBackup, true);
     mock.timers.tick(61000);
@@ -158,6 +163,7 @@ test('a muted game does not bring the playlist back by itself', async () => {
   try {
     const { radio, frames, net } = rig({ online: false });
     radio.start();
+    radio.newRace();
     await flush();
     radio.setMuted(true);
     net.online = true;
@@ -173,11 +179,81 @@ test('a muted game does not bring the playlist back by itself', async () => {
   }
 });
 
+test('each race gets a new song straight away, without waiting for the last to end', async () => {
+  mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    const { radio, host, frames } = rig();
+    radio.start();
+    radio.newRace();
+    await flush();
+    frames[0].load();
+    mock.timers.tick(200000);
+    radio.newRace();
+    await flush();
+    assert.equal(frames.length, 2);
+    assert.notEqual(playing(frames[1]), playing(frames[0]));
+    assert.equal(host.children[0], frames[1]);
+    frames[1].load();
+    mock.timers.tick((song(frames[0]).seconds - 200 + 5) * 1000);
+    await flush();
+    assert.equal(frames.length, 2, 'the first song\'s timer must die with it');
+  } finally {
+    mock.timers.reset();
+  }
+});
+
+test('start alone plays nothing, so the Start click gives one song and not two', async () => {
+  const { radio, frames } = rig();
+  radio.newRace();
+  await flush();
+  assert.equal(frames.length, 0, 'the race behind the title screen started a song');
+  radio.start();
+  await flush();
+  assert.equal(frames.length, 0);
+});
+
+test('a muted game starts no song on a new race', async () => {
+  mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    const { radio, frames } = rig();
+    radio.start();
+    radio.newRace();
+    await flush();
+    radio.setMuted(true);
+    radio.newRace();
+    await flush();
+    assert.equal(frames.length, 1);
+  } finally {
+    mock.timers.reset();
+  }
+});
+
+test('a new race tries Suno again from the backup, and stays on it if still down', async () => {
+  mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    const { radio, frames, net } = rig({ online: false });
+    radio.start();
+    radio.newRace();
+    await flush();
+    radio.newRace();
+    await flush();
+    assert.equal(radio.onBackup, true);
+    net.online = true;
+    radio.newRace();
+    await flush();
+    assert.equal(radio.onBackup, false);
+    assert.equal(frames.length, 1);
+  } finally {
+    mock.timers.reset();
+  }
+});
+
 test('mute removes the player, stops the queue, and unmute moves to the next song', async () => {
   mock.timers.enable({ apis: ['setTimeout'] });
   try {
     const { radio, host, frames } = rig();
     radio.start();
+    radio.newRace();
     await flush();
     frames[0].load();
     radio.setMuted(true);
@@ -199,6 +275,7 @@ test('muting while Suno is still answering does not start a song afterwards', as
   try {
     const { radio, frames } = rig();
     radio.start();
+    radio.newRace();
     radio.setMuted(true);
     await flush();
     assert.equal(frames.length, 0);
@@ -212,6 +289,7 @@ test('mute works on the bundled track, and muting before the start holds', async
   try {
     const offline = rig({ online: false });
     offline.radio.start();
+    offline.radio.newRace();
     await flush();
     offline.radio.setMuted(true);
     assert.equal(offline.backup.muted, true);
@@ -221,6 +299,7 @@ test('mute works on the bundled track, and muting before the start holds', async
     const early = rig();
     early.radio.setMuted(true);
     early.radio.start();
+    early.radio.newRace();
     await flush();
     assert.equal(early.frames.length, 0);
     assert.equal(early.backup.paused, 1);

@@ -131,6 +131,7 @@ function clearVisuals() {
 }
 
 function newRace() {
+  audio.newRace();
   clearTimeout(state.finishTimer);
   arsenalView.reset(); // first: its blades are parented to the car visuals
   clearVisuals();
