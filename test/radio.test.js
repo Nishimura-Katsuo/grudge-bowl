@@ -72,10 +72,10 @@ test('starts an autoplaying player, and the next song follows when this one ends
     assert.match(frames[0].allow, /autoplay/);
     assert.equal(backup.paused, 1, 'the backup must not play over the song');
     frames[0].load();
-    mock.timers.tick((song(frames[0]).seconds + 3) * 1000);
+    mock.timers.tick((song(frames[0]).seconds + 0.9) * 1000);
     await flush();
     assert.equal(frames.length, 1, 'cut the song off before it finished');
-    mock.timers.tick(1100);
+    mock.timers.tick(200);
     await flush();
     assert.equal(frames.length, 2);
     assert.notEqual(playing(frames[1]), playing(frames[0]));
@@ -243,6 +243,51 @@ test('a new race tries Suno again from the backup, and stays on it if still down
     await flush();
     assert.equal(radio.onBackup, false);
     assert.equal(frames.length, 1);
+  } finally {
+    mock.timers.reset();
+  }
+});
+
+test('a song ending after the flag stops there, and nothing plays until the next race', async () => {
+  mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    const { radio, host, backup, frames } = rig();
+    radio.start();
+    radio.newRace();
+    await flush();
+    frames[0].load();
+    radio.finishRace();
+    mock.timers.tick(242000);
+    await flush();
+    assert.equal(host.children.length, 0, 'the player is left to loop the song');
+    assert.equal(frames.length, 1, 'a new song started on the ending screen');
+    mock.timers.tick(600000);
+    await flush();
+    assert.equal(frames.length, 1);
+    assert.equal(backup.played, 1, 'the backup is not for this');
+    radio.newRace();
+    await flush();
+    assert.equal(frames.length, 2);
+    frames[1].load();
+    mock.timers.tick(242000);
+    await flush();
+    assert.equal(frames.length, 3, 'the next race has to clear the flag');
+  } finally {
+    mock.timers.reset();
+  }
+});
+
+test('a song ending before the flag, as in a long pause, still moves on', async () => {
+  mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    const { radio, frames } = rig();
+    radio.start();
+    radio.newRace();
+    await flush();
+    frames[0].load();
+    mock.timers.tick(242000);
+    await flush();
+    assert.equal(frames.length, 2);
   } finally {
     mock.timers.reset();
   }

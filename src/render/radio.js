@@ -1,5 +1,6 @@
 // The soundtrack: Suno's own player, with a fresh song from a shuffled deck for each
-// race. Songs outlast a race, so the timer only matters if the game sits paused.
+// race. A race can outlast its song when the winner's scene runs long, and the player
+// loops a finished song, so it's taken away at the end rather than left to start over.
 // Suno has no playlist embed and its player is cross-origin, so the page can't see
 // inside it or hear from it, and volume and pause are out of reach. Stopping a song
 // means removing the player.
@@ -8,7 +9,8 @@
 const PLAYER = 'https://suno.com/embed/';
 const REACH_LIMIT = 8; // seconds to wait for Suno, which now and then takes over 4 to answer
 const LOAD_LIMIT = 10; // seconds for a player to load before giving up on it
-const START_LAG = 4; // seconds a loaded player takes to start, measured at 2 to 3
+const START_LAG = 1; // a loaded player takes 1 to 1.6 s to start, and losing the last
+                     // moment of a song beats hearing the start of it again
 const RETRY_AFTER = 60; // seconds on the backup between tries at getting Suno back
 
 export const SONGS = [
@@ -51,6 +53,7 @@ export class Radio {
     this.muted = false;
     this.started = false;
     this.onBackup = false;
+    this.raceOver = false;
     this.turn = 0; // anything still waiting from an earlier turn stands down
     this.nextTimer = 0;
     this.loadTimer = 0;
@@ -71,7 +74,22 @@ export class Radio {
   // The first race after Start is the first song. The race behind the title screen
   // gets nothing, because nobody has clicked anything yet.
   newRace() {
+    this.raceOver = false;
     if (this.started && !this.muted) this.next();
+  }
+
+  // From here the next thing to play is the next race's song.
+  finishRace() {
+    this.raceOver = true;
+  }
+
+  songEnded() {
+    if (this.raceOver) {
+      this.stopWaiting();
+      this.host.replaceChildren();
+    } else {
+      this.next();
+    }
   }
 
   pick() {
@@ -108,7 +126,7 @@ export class Radio {
     frame.addEventListener('load', () => {
       if (turn !== this.turn) return;
       clearTimeout(this.loadTimer);
-      this.nextTimer = setTimeout(() => this.next(), (song.seconds + START_LAG) * 1000);
+      this.nextTimer = setTimeout(() => this.songEnded(), (song.seconds + START_LAG) * 1000);
     });
     this.host.replaceChildren(frame);
   }

@@ -273,6 +273,7 @@ function handleEvent(e, world) {
       hud.announce('Go', 900);
       break;
     case 'finish':
+      audio.finishRace();
       audio.cheer(1);
       break;
     default:
