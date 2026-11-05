@@ -38,7 +38,7 @@ Three jumps make the trouble worse. Hump launches out of a hairpin, where exit s
 | `src/sim/` | Fixed-step 240 Hz 6-DOF vehicle physics, contacts, damage, sensors and race rules. No DOM; runs headless and replays from a seed. The track, its crossroads, racing line and pace notes are all derived from one table of control points in `track.js`. |
 | `src/ai/` | Generic forward-pass runtime and the generated weights. |
 | `tools/nn/` | The construction scripts that derive every weight, plus evaluation and inspection tools. |
-| `src/render/` | three.js stage, cars with crumpling shells, effects, audio, and the spectator director. |
+| `src/render/` | three.js stage, cars with crumpling shells, effects, the spectator director, and sound effects rendered by inverse FFT in the browser. |
 | `src/ui/` | Grudge Board, feed and posters. |
 | `docs/NEURAL_NETWORK.md` | The full walkthrough of how the network was designed and programmed. |
 | `docs/NEURON_MAP.md` | Every neuron, with its equation, layer and consumers. |

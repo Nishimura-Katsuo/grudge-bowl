@@ -88,6 +88,8 @@ const state = {
   running: false,
 };
 
+const HEARD_AT = 10; // metres out to which a hit plays at full level
+
 const telemetryOf = (id) => state.brains[id]?.telemetry ?? null;
 
 const hud = new Hud({
@@ -191,9 +193,13 @@ const pt = new THREE.Vector3();
 const nv = new THREE.Vector3();
 
 function handleEvent(e, world) {
-  const near = (x, z) => {
-    const d = Math.hypot(camera.position.x - x, camera.position.z - z);
-    return Math.max(0.12, 1 - d / 120);
+  const heard = (x, z) => {
+    const dx = x - camera.position.x, dz = z - camera.position.z;
+    const d = Math.hypot(dx, dz);
+    const right = camera.matrixWorld.elements;
+    // Sound in the open: half as loud for each doubling of distance. Close hits sit
+    // over the music and far ones drop under it.
+    return { near: Math.min(1, HEARD_AT / d), pan: d > 1 ? (dx * right[0] + dz * right[2]) / d * 0.8 : 0 };
   };
   switch (e.type) {
     case 'hit': {
@@ -204,7 +210,7 @@ function handleEvent(e, world) {
       crumple(state.visuals[e.a], pt, nv, Math.min(1, e.dmgA * 5 + e.strength * 0.3));
       nv.negate();
       crumple(state.visuals[e.b], pt, nv, Math.min(1, e.dmgB * 5 + e.strength * 0.3));
-      audio.crunch(e.strength, near(e.x, e.z));
+      audio.crunch(e.strength, heard(e.x, e.z));
       const inFrame = e.a === director.subject || e.b === director.subject;
       if (e.upper >= 0 && state.slowMo <= 0 && inFrame) state.slowMo = 1.1;
       if (e.strength > 0.62 && inFrame && state.slowMo <= 0) state.slowMo = 0.9;
@@ -216,13 +222,14 @@ function handleEvent(e, world) {
       pt.set(e.x, e.y, e.z);
       nv.set(e.nx, 0, e.nz);
       crumple(state.visuals[e.car], pt, nv, Math.min(1, e.strength * 0.7));
-      audio.crunch(e.strength * 0.7, near(e.x, e.z));
+      audio.fence(e.strength * 0.7, heard(e.x, e.z));
       break;
     }
     case 'scrape':
       for (let i = 0; i < 4; i++) {
         effects.sparks.spawn(e.x, e.y + 0.04, e.z, Math.random() * 6 - 3, Math.random() * 4, Math.random() * 6 - 3, 0.3);
       }
+      audio.scrape(e.speed, heard(e.x, e.z));
       break;
     case 'wheelOff': {
       const c = world.cars[e.car];
@@ -233,8 +240,7 @@ function handleEvent(e, world) {
       const c = world.cars[e.car];
       effects.explosion(e.x, e.y, e.z, c.colour);
       director.shake(1.0);
-      audio.crunch(1, near(e.x, e.z));
-      audio.cheer(1);
+      audio.ko(heard(e.x, e.z));
       if (!state.retired.has(e.car)) {
         state.retired.add(e.car);
         retireCarVisual(state.visuals[e.car]);
@@ -246,7 +252,7 @@ function handleEvent(e, world) {
       break;
     case 'landing':
       effects.landing(e.x, e.y, e.z, e.drop);
-      audio.crunch(Math.min(0.5, e.drop * 0.05), near(e.x, e.z));
+      audio.landing(Math.min(1, e.drop * 0.1), heard(e.x, e.z));
       break;
     case 'towed':
       effects.towed(e.x, e.y, e.z);
@@ -254,43 +260,37 @@ function handleEvent(e, world) {
       break;
     case 'pickup':
       effects.crateBurst(e.x, e.y, e.z);
-      audio.pickup(near(e.x, e.z));
+      audio.pickup(heard(e.x, e.z));
       break;
     case 'fired': {
       const key = WEAPONS[e.weapon].key;
-      const loudness = near(e.x, e.z);
-      if (key === 'foghorn') {
-        audio.foghorn(loudness);
-        arsenalView.horn(e.x, e.y, e.z);
-      } else if (key === 'threshingWhirl') audio.whirr(loudness);
-      else if (key === 'backhander') audio.windup(loudness);
-      else if (key === 'barnBurner' || key === 'grudgeSeeker' || key === 'repoHook') audio.launch(loudness);
-      else audio.clank(loudness);
+      audio.fired(key, heard(e.x, e.z));
+      if (key === 'foghorn') arsenalView.horn(e.x, e.y, e.z);
       break;
     }
     case 'blast':
       effects.blast(e.x, e.y, e.z, e.radius);
-      audio.boom(near(e.x, e.z));
+      audio.boom(heard(e.x, e.z));
       break;
     case 'hooked':
-      audio.clank(near(e.x, e.z));
+      audio.hooked(heard(e.x, e.z));
       break;
     case 'sprung':
       effects.landing(e.x, e.y, e.z, 6);
-      audio.boing(near(e.x, e.z));
+      audio.boing(heard(e.x, e.z));
       break;
     case 'slapped':
       effects.impact(e.x, e.y + 1, e.z, 0, 0, e.final ? 1 : 0.6, 0xf3e2bd, 0xd9a27e);
       effects.landing(e.x, e.y, e.z, e.final ? 9 : 5);
-      audio.slap(e.final ? 1 : 0.7, near(e.x, e.z));
+      audio.slap(e.final, heard(e.x, e.z));
       break;
     case 'cut':
       effects.impact(e.x, e.y, e.z, 0, 0, 0.45, 0x9aa0a6, 0x9aa0a6);
-      audio.clank(near(e.x, e.z));
+      audio.cut(heard(e.x, e.z));
       break;
     case 'pianoLands':
       effects.pianoKeys(e.x, e.y, e.z);
-      audio.pianoCrash(near(e.x, e.z));
+      audio.pianoCrash(heard(e.x, e.z));
       break;
     case 'go':
       hud.announce('Go', 900);
@@ -383,7 +383,7 @@ function frame(now) {
     const dist = camPos.distanceTo(state.visuals[director.subject].root.position);
     const nearness = Math.max(0.1, 1 - dist / 70);
     const rearSlide = Math.max(subj.wheels[2].slide, subj.wheels[3].slide);
-    audio.setEngine(subj.rpm, subj.input.throttle, rearSlide, subj.alive ? nearness : 0);
+    audio.setEngine(subj.rpm, subj.input.throttle, rearSlide, subj.alive ? nearness : 0, Math.hypot(subj.vx, subj.vz));
 
     hudClock -= realDt;
     if (hudClock <= 0) {
