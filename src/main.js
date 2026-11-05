@@ -99,32 +99,8 @@ const hud = new Hud({
     state.running = true;
     newRace();
   },
-  shot: (s) => {
-    director.setManual(s);
-    hud.setActive('[data-shot]', 'shot', s);
-  },
-  speed: (v) => {
-    state.speed = v;
-    hud.setActive('[data-speed]', 'speed', v);
-  },
   follow: (id) => director.follow(id),
-  toggleMute: () => toggleMute(),
-  togglePause: () => togglePause(),
 });
-
-function setPaused(paused) {
-  state.paused = paused;
-  document.getElementById('pause-btn').textContent = paused ? 'Resume' : 'Pause';
-}
-
-function togglePause() {
-  setPaused(!state.paused);
-}
-
-function toggleMute() {
-  audio.setMuted(!audio.muted);
-  document.getElementById('mute-btn').textContent = audio.muted ? 'Unmute' : 'Mute';
-}
 
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
@@ -161,7 +137,7 @@ function newRace() {
   effects.reset();
   director.endFeature();
   state.scene = null;
-  setPaused(false);
+  state.paused = false;
   state.seed = (Math.random() * 1e9) | 0;
   state.brains = [];
   const world = createWorld({
@@ -411,15 +387,13 @@ window.addEventListener('keydown', (e) => {
   const shots = { 1: 'chase', 2: 'bumper', 3: 'trackside', 4: 'drone', 5: 'tower', 6: 'heli' };
   if (shots[e.key]) {
     director.setManual(shots[e.key]);
-    hud.setActive('[data-shot]', 'shot', shots[e.key]);
   } else if (e.key === 'a' || e.key === 'A' || e.key === '0') {
     director.setManual(null);
-    hud.setActive('[data-shot]', 'shot', null);
   } else if (e.key === ' ') {
     e.preventDefault();
-    togglePause();
+    state.paused = !state.paused;
   } else if (e.key === 'm' || e.key === 'M') {
-    toggleMute();
+    audio.setMuted(!audio.muted);
   } else if ((e.key === '[' || e.key === ']') && state.world) {
     const n = state.world.cars.length;
     director.follow((director.subject + (e.key === ']' ? 1 : n - 1)) % n);

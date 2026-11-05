@@ -78,7 +78,7 @@ button:focus-visible { outline: 3px solid var(--mustard); outline-offset: 2px; }
 
 /* The bot on camera, painted across the foot of the picture. */
 #focus {
-  position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%);
+  position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
   display: grid; grid-template-columns: auto auto; align-items: end; gap: 0 14px;
   text-shadow: 0 2px 0 rgba(40,15,0,.55), 0 0 14px rgba(40,15,0,.45);
   pointer-events: none; text-align: center;
@@ -122,18 +122,6 @@ button:focus-visible { outline: 3px solid var(--mustard); outline-offset: 2px; }
   80% { opacity: 1; }
   100% { opacity: 0; }
 }
-
-#controls {
-  position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
-  width: max-content; max-width: calc(100vw - 32px);
-  display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; align-items: center;
-  font-weight: 700; font-size: 17px;
-}
-.group { display: flex; flex-wrap: wrap; justify-content: center; max-width: 100%; gap: 2px; background: rgba(26,27,32,.62); padding: 2px; }
-.group button, .source-link { padding: 3px 10px; color: var(--paint); }
-.source-link { text-decoration: none; }
-.group button:hover, .source-link:hover { background: rgba(243,226,189,.16); }
-.group button[aria-pressed='true'] { background: var(--mustard); color: var(--soot); }
 
 /* Title and finish cards: a fair poster, nailed up over the picture. */
 .poster {
@@ -215,8 +203,6 @@ body.scene #board, body.scene #feed, body.scene #focus { opacity: 0; visibility:
   .num { height: 16px; font-size: 10px; border-width: 1px; }
   .name { font-size: calc(13px * var(--fit, 1)); }
   .score { display: none; }
-  /* No room for the control bar as well: it comes back with the next race. */
-  body.scene #controls { display: none; }
   #finish { padding: 8px; gap: 8px; grid-template-columns: minmax(0, 1fr) minmax(190px, 240px); }
   .results { padding: 8px 10px; align-self: end; }
   .results h3 { font-size: 17px; }
@@ -239,15 +225,12 @@ body.scene #board, body.scene #feed, body.scene #focus { opacity: 0; visibility:
 }
 
 @media (max-width: 760px) {
-  #feed { top: auto; bottom: 150px; right: 8px; }
+  #feed { top: auto; bottom: 134px; right: 8px; }
   #feed li { font-size: 15px; }
   #focus-name { font-size: 22px; }
   #focus-mode { font-size: 16px; min-height: 19px; }
   #focus-speed { font-size: 18px; }
   .focus-right { width: 130px; }
-  #controls { gap: 6px; font-size: 15px; }
-  .group button, .source-link { padding: 3px 7px; }
-  #focus { bottom: 112px; }
 }
 
 @media (max-width: 560px) {

@@ -54,14 +54,6 @@ export class Hud {
   bindControls() {
     const { handlers } = this;
     this.el('start-btn').addEventListener('click', () => handlers.start());
-    document.querySelectorAll('[data-shot]').forEach((b) => {
-      b.addEventListener('click', () => handlers.shot(b.dataset.shot || null));
-    });
-    document.querySelectorAll('[data-speed]').forEach((b) => {
-      b.addEventListener('click', () => handlers.speed(Number(b.dataset.speed)));
-    });
-    this.el('mute-btn').addEventListener('click', () => handlers.toggleMute());
-    this.el('pause-btn').addEventListener('click', () => handlers.togglePause());
   }
 
   build(world) {
@@ -327,16 +319,8 @@ export class Hud {
     this.syncInert();
   }
 
-  // While the title is up, the board and controls behind it are out of the tab order.
+  // While the title is up, the board behind it is out of the tab order.
   syncInert() {
-    const open = !this.el('title').hidden;
-    this.el('board').inert = open;
-    this.el('controls').inert = open;
-  }
-
-  setActive(selector, attr, value) {
-    document.querySelectorAll(selector).forEach((b) => {
-      b.setAttribute('aria-pressed', String((b.dataset[attr] || '') === String(value ?? '')));
-    });
+    this.el('board').inert = !this.el('title').hidden;
   }
 }
