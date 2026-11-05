@@ -97,6 +97,7 @@ export class Radio {
     frame.allow = 'autoplay; encrypted-media';
     frame.title = `${song.title}, playing on Suno`;
     frame.tabIndex = -1;
+    frame.scrolling = 'no'; // old but still the only way to set this from outside the frame
     this.loadTimer = setTimeout(() => this.useBackup(), LOAD_LIMIT * 1000);
     frame.addEventListener('load', () => {
       if (turn !== this.turn) return;
