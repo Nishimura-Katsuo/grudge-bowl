@@ -123,6 +123,11 @@ button:focus-visible { outline: 3px solid var(--mustard); outline-offset: 2px; }
   100% { opacity: 0; }
 }
 
+/* Suno's player, in the corner while it plays. */
+#radio { position: fixed; right: 14px; bottom: 14px; width: 320px; transform-origin: right bottom; }
+#radio iframe { display: block; width: 320px; height: 100px; border: 0; }
+#radio:empty { display: none; }
+
 /* Title and finish cards: a fair poster, nailed up over the picture. */
 .poster {
   position: fixed; inset: 0; display: grid; place-items: center; padding: 16px;
@@ -203,6 +208,8 @@ body.scene #board, body.scene #feed, body.scene #focus { opacity: 0; visibility:
   .num { height: 16px; font-size: 10px; border-width: 1px; }
   .name { font-size: calc(13px * var(--fit, 1)); }
   .score { display: none; }
+  /* Tucked in under the board, where a small screen has room. */
+  #radio { right: auto; bottom: auto; left: 8px; top: 322px; transform: scale(.55); transform-origin: left top; }
   #finish { padding: 8px; gap: 8px; grid-template-columns: minmax(0, 1fr) minmax(190px, 240px); }
   .results { padding: 8px 10px; align-self: end; }
   .results h3 { font-size: 17px; }
@@ -225,7 +232,7 @@ body.scene #board, body.scene #feed, body.scene #focus { opacity: 0; visibility:
 }
 
 @media (max-width: 760px) {
-  #feed { top: auto; bottom: 134px; right: 8px; }
+  #feed { top: auto; bottom: 134px; right: 8px; z-index: 1; }
   #feed li { font-size: 15px; }
   #focus-name { font-size: 22px; }
   #focus-mode { font-size: 16px; min-height: 19px; }

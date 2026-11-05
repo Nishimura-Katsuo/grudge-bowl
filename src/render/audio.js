@@ -1,10 +1,12 @@
 // Sound effects are samples rendered in this browser by inverse FFT (see foley.js),
 // nothing downloaded. They render in the background from page load, so the title
-// screen pays for them, and each one starts working as it arrives. The music is a
-// plain audio element, which plays from disk where fetching a file for Web Audio can't.
+// screen pays for them, and each one starts working as it arrives. The music comes
+// from radio.js. Its backup is a plain audio element, which plays from disk where
+// fetching a file for Web Audio can't.
 
 import { SAMPLE_RATE } from './spectral.js';
 import { ENGINE_RPMS, SOUNDS, render } from './foley.js';
+import { Radio } from './radio.js';
 
 const MUSIC_VOLUME = 0.5;
 const EFFECTS_VOLUME = 0.85;
@@ -61,6 +63,7 @@ export class Audio {
     this.music.loop = true;
     this.music.preload = 'auto';
     this.music.volume = MUSIC_VOLUME;
+    this.radio = new Radio(document.getElementById('radio'), this.music);
     this.rendered = this.renderLibrary();
   }
 
@@ -87,14 +90,8 @@ export class Audio {
     this.loops[name]?.(buffer);
   }
 
-  playMusic() {
-    this.music.play().catch(() => {
-      // Blocked until a gesture counts, or the file is missing. The race runs regardless.
-    });
-  }
-
   start() {
-    this.playMusic();
+    this.radio.start();
     if (this.ctx) return;
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -172,7 +169,7 @@ export class Audio {
 
   setMuted(m) {
     this.muted = m;
-    this.music.muted = m;
+    this.radio.setMuted(m);
     if (this.master) this.master.gain.value = m ? 0 : EFFECTS_VOLUME;
   }
 

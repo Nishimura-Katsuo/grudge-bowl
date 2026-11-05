@@ -15,7 +15,7 @@ npm start         # builds and serves http://localhost:5178
 npm test          # physics and network tests
 ```
 
-`dist/` holds the page and its music, and works opened straight from disk.
+`dist/` holds the page and its backup track, and works opened straight from disk. The soundtrack plays through Suno's embedded player, shuffled, and needs a connection; without one the backup track loops.
 
 ## Watching
 
