@@ -357,7 +357,7 @@ test('route-loss deadline preserves an engaged turn that reduces heading error, 
 
 
 test('soft deadlines retain opportunity and posture, with grounded hard expiry at nineteen seconds',()=>{
-  const keys=['barnBurner','grudgeSeeker','welcomeMat','oilSlick','smokeBomb','threshingWhirl','repoHook','bedspring','prizeBull','grandPiano','foghorn'];
+  const keys=['barnBurner','grudgeSeeker','welcomeMat','oilSlick','smokeBomb','threshingWhirl','repoHook','bedspring','backhander','grandPiano','foghorn'];
   for(const key of keys){const f=fixture();f.set('arms.'+key,1);state(f,'weaponAge',20);f.run();assert.equal(f.v('fire'),0,key+' ready');f.set('arms.ready',1);f.set('ego.wheelsDown',0);f.run();assert.equal(f.v('fire'),0,key+' airborne hard expiry');f.set('ego.wheelsDown',1);f.run();assert.equal(f.v('fire'),1,key+' hard expiry');assert.equal(f.v('weaponAgeNext'),0);}
   for(const key of ['barnBurner','repoHook','welcomeMat','oilSlick','smokeBomb','bedspring','threshingWhirl','foghorn']){const f=fixture();f.set('arms.'+key,1);f.set('arms.ready',1);state(f,'weaponAge',18);f.run();assert.equal(f.v('fire'),0,key+' no opportunity at soft expiry');}
   const f=fixture();f.set('arms.barnBurner',1);f.set('arms.ready',1);rival(f,10,{fwd:.15,dist:.15,right:0,relVelFwd:0});f.set('arms.aheadRange',.15);state(f,'weaponAge',18);f.set('ego.slipAngle',.5);f.run();assert.equal(f.v('fire'),0);f.set('ego.slipAngle',0);f.run();assert.equal(f.v('fire'),1);
@@ -369,6 +369,33 @@ test('weapon temperament changes timing, aim range, grudge restraint and defensi
   assert.ok(first(1)<first(0));assert.ok(first(1,1,true)>first(1,0,true)+2);
   for(const nerve of [0,1]){const f=fixture();f.set('arms.foghorn',1);f.set('arms.ready',1);f.set('arms.incoming',.75);f.set('ego.temperNerve',nerve);f.run();assert.equal(f.v('fire'),nerve?0:1);}
   for(const aggressive of [0,1]){const f=fixture();f.set('arms.barnBurner',1);f.set('arms.ready',1);f.set('arms.aheadRange',.4);rival(f,10,{fwd:.4,dist:.4,relVelFwd:0});f.set('ego.temperAggression',aggressive);state(f,'weaponAge',2);f.run();assert.equal(f.v('fire'),aggressive);}
+});
+
+test('Backhander keeps slot nine and its firing equations cover the roster and temperament range corners',async()=>{
+  const {ROSTER,TEMPER_RANGE,lineupFor}=await import('../src/sim/roster.js');
+  const {WEAPON}=await import('../src/sim/arsenal.js');
+  const {weaponKeys}=await import('../tools/nn/arms.mjs');
+  assert.equal(WEAPON.backhander,9);assert.equal(weaponKeys[8],'backhander');assert.equal(OBS.index['arms.backhander'],261);
+  for(const bot of ROSTER)for(const [axis,[low,high]] of Object.entries(TEMPER_RANGE))assert.ok(bot.temper[axis]>=low&&bot.temper[axis]<=high,bot.name+' '+axis);
+  const corners=[];for(const aggression of TEMPER_RANGE.aggression)for(const nerve of TEMPER_RANGE.nerve)for(const vengeance of TEMPER_RANGE.vengeance)corners.push({aggression,nerve,vengeance});
+  for(const temper of [...ROSTER.map(b=>b.temper),...corners])for(const rage of [0,1])for(const incoming of [0,.6,1])for(const age of [0,1,2,19]){
+    const f=fixture();f.set('arms.backhander',1);f.set('arms.ready',1);f.set('arms.incoming',incoming);
+    for(const [axis,value] of Object.entries(temper))f.set('ego.temper'+axis[0].toUpperCase()+axis.slice(1),value);
+    state(f,'rage',rage);state(f,'weaponAge',age);f.run();
+    const A=f.obs[OBS.index['ego.temperAggression']],N=f.obs[OBS.index['ego.temperNerve']],r=f.v('rage'),t=Math.min(20,age+1/30);
+    const allowed=t>=19||((t>=1.5-.75*A-.3*r||t>=12-4*A-r)&&incoming<=.4+.3*N);
+    assert.equal(f.v('fire'),Number(allowed),JSON.stringify({temper,rage,incoming,age}));
+  }
+  const lineup=lineupFor(42),w=createWorld({seed:42,lineup,brainFactory:createBrain});
+  assert.equal(w.cars.length,12);w.cars.forEach((car,id)=>{assert.equal(car.id,id);assert.equal(car.name,lineup[id].name);assert.equal(w.brains[id].telemetry.grudge.length,12);});
+});
+
+test('Foghorn metrics exclude the unswattable hand projectile',async()=>{
+  const {weaponMetrics}=await import('../tools/nn/weapon-metrics.mjs');
+  const w=createWorld({seed:1,carCount:2}),car=w.cars[0],m=weaponMetrics(w);
+  w.arsenal.shots.push(...['hand','rocket'].map((kind,id)=>({id,kind,owner:1,x:car.px,z:car.pz})));
+  m.before();w.arsenal.shots.length=0;w.events.push({type:'fired',car:0,weapon:11,time:0});
+  assert.equal(m.result().hornSwats,1);
 });
 
 test('hidden slots preserve remembered identity and leaking grudges without creating a zero-distance obstacle',()=>{
@@ -393,7 +420,7 @@ test('absent tail range cannot become a tactical drop at maximum aggression and 
 
 
 test('each weapon class takes its intended tactical opportunity after pickup delay',()=>{
-  const cases=[['barnBurner',{'aheadRange':.15,'aheadBearing':.03}],['repoHook',{'aheadRange':.3}],['grudgeSeeker',{}],['prizeBull',{}],['grandPiano',{}],...['welcomeMat','oilSlick','smokeBomb','bedspring'].map(k=>[k,{behindRange:.4}]),['threshingWhirl',{closeRivals:.25}],['foghorn',{closeRivals:.25}]];
+  const cases=[['barnBurner',{'aheadRange':.15,'aheadBearing':.03}],['repoHook',{'aheadRange':.3}],['grudgeSeeker',{}],['backhander',{}],['grandPiano',{}],...['welcomeMat','oilSlick','smokeBomb','bedspring'].map(k=>[k,{behindRange:.4}]),['threshingWhirl',{closeRivals:.25}],['foghorn',{closeRivals:.25}]];
   for(const [key,extra] of cases){const f=fixture();f.set('arms.'+key,1);f.set('arms.ready',1);for(const [n,v] of Object.entries(extra))f.set('arms.'+n,v);if(key==='barnBurner')rival(f,10,{fwd:.15*Math.cos(.03),right:.15*Math.sin(.03),dist:.15,relVelFwd:0});f.run();assert.equal(f.v('fire'),0,key);state(f,'weaponAge',2);f.run();assert.equal(f.v('fire'),1,key);assert.equal(f.v('weaponAgeNext'),0);}
   const f=fixture();f.set('arms.barnBurner',1);f.set('arms.ready',1);f.set('arms.aheadRange',.1);f.set('arms.aheadBearing',.3);state(f,'weaponAge',2);f.run();assert.equal(f.v('fire'),0);f.set('arms.aheadBearing',0);f.set('ego.wheelsDown',0);f.run();assert.equal(f.v('fire'),0);
 });

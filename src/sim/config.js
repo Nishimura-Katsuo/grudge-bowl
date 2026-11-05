@@ -128,7 +128,7 @@ export const ARSENAL = {
   whirl: { seconds: 1.3, turns: 2, grip: 0.14, reach: 4, height: 2.4, push: 11, lift: 2.5, damage: 0.072, cutEvery: 0.04, rehit: 0.45 },
   hook: { speed: 130, life: 0.9, reach: 70, hitReach: 2.5, reel: 1.5, snug: 5.5, snap: 95, pullOwner: 30, pullVictim: 13, damage: 0.016 },
   spring: { radius: 2.8, life: 24, arm: 0.5, launch: 13 },
-  bull: { speed: 82, life: 10, hitReach: 3, height: 2.6, gore: 12, goreLift: 5, goreDamage: 0.056, radius: 6, push: 14, lift: 6, spin: 3, damage: 0.136 },
+  hand: { speed: 82, life: 12, reach: 4.5, palm: 4, height: 6, windup: 0.18, follow: 0.26, rehit: 1, push: 4, drive: 12, lift: 1, damage: 0.025, finalPush: 6, finalDamage: 0.07 },
   piano: { fall: 1.7, radius: 5, push: 6, lift: -6, spin: 2, damage: 0.24 },
   horn: { radius: 18, push: 15, lift: 3 },
 };

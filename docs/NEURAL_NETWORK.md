@@ -2,6 +2,16 @@
 
 This network is a program written into weights. Racing-line pursuit and slip/yaw feedback become arithmetic neurons; comparisons and winner-take-all circuits select passing space, trigger weapons and choose recovery manoeuvres. Recurrent neurons remember grudges, rage, offsets and timers. One generic forward pass controls every car. No training, fitting, parameter sweep or policy code outside the network is used.
 
+## Backhander naming and roster compatibility
+
+Slot 9 is now `arms.backhander` at observation index 261. Only seven graph labels changed; every numeric parameter, edge, activation, output index and recurrent connection is identical. The two rebuilds agree byte for byte. The comparison is recorded in [backhander-rename-verification.json](../tools/nn/backhander-rename-verification.json). The Foghorn observer now excludes shot kind `hand` from its swat count.
+
+Backhander retains the fire-and-forget trigger: grounded, settled, incoming threat below the nerve threshold, pickup patience/grudge reservation, and the existing deadlines. Its race-leader target and back-half-only availability belong to the simulator. The network assumes no bull geometry, damage, movement or attack animation; it contains no hand-specific physics constants either. The current hand uses `ARSENAL.hand.height`, not the old slot-9 overlap value quoted in the historical measurement below.
+
+The 36-entry roster still supplies twelve race-local IDs 0-11. Eleven opponent slots and twelve telemetry grudge entries therefore remain correct; a race with 36 simultaneous cars would not be supported. All current temperament values lie in aggression [0.55,1], nerve [0.35,1] and vengeance [0.3,1]. The equations use independent bounded inputs, not original-driver identities or correlations between axes. Regression checks cover the Backhander trigger for every roster temperament and all eight range corners. This establishes circuit compatibility, not identical race performance for new lineups.
+
+The race tables, simulator hash and shipping verification below remain the preceding measured checkpoint; this naming-only task does not rerun or relabel historical races. The current renamed weight hash is in the linked comparison artifact.
+
 ## Final status on the applied balance
 
 **The deployed weights are unchanged from pass 2.** This shipping-review refresh includes the final simulator fixes and repairs the best-lap measurement: the shortened opening lap can no longer satisfy a full-lap pace floor. The earlier recovery and contact attempts remain rejected: each lost three flag finishes on the previous finish-line revision. No construction or driving behaviour was changed here. The measured shipping limits and remaining historical targets are reported below.
@@ -23,7 +33,7 @@ The simulator now has DAMAGE.scale=.00464, weapon damage/goreDamage at 80% of th
 | All eleven weapons used | 11/11; PASS |
 | Crates (historical 65% target) | 46.97% collected, 52.04% live misses; FAIL |
 
-The final simulator also bounds the Grudge Seeker's angular turn rate, including a target directly astern; crate pickup requires vertical reach of 2.6 m, Whirl requires vertical overlap within 2.4 m, and Prize Bull within 2.6 m. creditHit ignores victims already at zero health, preventing a later zero-damage touch from taking knockout credit. Sensor layout and weights are unchanged.
+At the measured shipping-review checkpoint, the simulator also bounded the Grudge Seeker's angular turn rate, including a target directly astern; crate pickup requires vertical reach of 2.6 m, Whirl requires vertical overlap within 2.4 m, and Backhander within 2.6 m. creditHit ignores victims already at zero health, preventing a later zero-damage touch from taking knockout credit. Sensor layout and weights are unchanged.
 
 The policy is byte-identical to the before checkpoint; race differences from the preceding report arise from these simulator fixes. Across all 50 races, 45 finish by laps and 5 hit the clock. Race seconds are 179.2/187.5/200.0 min/median/max; minimum running is 2; median flag gap is 163 m and 8 flag finishes are within 60 m. Stalled KOs are 0.700/race. Total physical recovery is still not bounded by the network. All 50 rows agree field for field with a fresh execution of the owner's comparison script. The displayed maximum is 200.0 s; the raw maximum is 200.004 s, one 240 Hz step past the 200 s clock threshold. A literal ≤200 s raw limit therefore fails by that step. At least two running is PASS. Flag finishes are 45/50 against the approximately 48/50 expectation: FAIL. Clock seeds: 1, 4801, 9203, 10211, 10289. No weights were changed in response.
 
@@ -288,7 +298,7 @@ The delay row has weights −.75,−.3 and bias 1.5: calm A=0,r=0 waits 1.5 s; A
 |---|---|---|
 | Barn Burner | Grounded/settled; ahead ≤20+25A+10r m; bearing and predicted intercept inside the corridor described below | 18−4A−r (13–18) |
 | Repo Hook | Grounded/settled; ahead ≥10 m and ≤40+20A m | 18−4A−r (13–18) |
-| Grudge Seeker, Prize Bull, Grand Piano | Grounded/settled; incoming≤.4+.3N | 12−4A−r (7–12) |
+| Grudge Seeker, Backhander, Grand Piano | Grounded/settled; incoming≤.4+.3N | 12−4A−r (7–12) |
 | Welcome Mat, Oil Slick, Smoke Bomb, Bedspring | Present tail rival: behindRange<1 and distance≤20+16A+4r m | 12−4A+2V (8–14) |
 | Threshing Whirl | At least one rival within the 7 m sensor radius, grounded/settled | 12−4A−r (7–12) |
 | Foghorn | At least one close rival, or incoming≥.72+.08N−.02A | 12−4A−r (7–12) |

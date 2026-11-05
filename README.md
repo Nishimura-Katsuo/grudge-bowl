@@ -1,6 +1,6 @@
 # Grudge Bowl
 
-A five-lap race at last light on a road tied through itself, driven by twelve furious bots. You watch. Each bot's brain is a recurrent neural network whose weights were derived by hand and assigned directly: nothing was trained.
+A five-lap race at last light on a road tied through itself, driven by twelve furious bots drawn from a roster of thirty-six. You watch. Each bot's brain is a recurrent neural network whose weights were derived by hand and assigned directly: nothing was trained.
 
 **[Watch a race](https://nishimura-katsuo.github.io/grudge-bowl/)**
 
@@ -23,7 +23,7 @@ The Grudge Board is the running order. Click a name to follow that bot. Red yarn
 
 ## Rules
 
-Prize crates on the road hold eleven weapons, from the Barn Burner rocket and the Grudge Seeker, which hunts whoever hit you last, to the Prize Bull and the Grand Piano. `docs/BOT_CONTRACT.md` lists them all.
+Prize crates on the road hold eleven weapons, from the Barn Burner rocket and the Grudge Seeker, which hunts whoever hit you last, to the Backhander and the Grand Piano. `docs/BOT_CONTRACT.md` lists them all.
 
 Races run back to back. The winner gets about 20 seconds of burnouts, confetti and a few words, then the next race starts on its own.
 

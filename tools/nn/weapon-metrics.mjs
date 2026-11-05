@@ -10,7 +10,7 @@ export function weaponMetrics(w){
     if(event.type==='fired'){
       const car=w.cars[event.car],p=pickups.get(car.id),obs=w.obs[car.id];
       shots.push({car:car.id,name:car.name,temper:car.temper,weapon:event.weapon,dwell:p?event.time-p.time:null,behind:behind(car),aheadRange:obs[OBS.index['arms.aheadRange']]*100,incoming:obs[OBS.index['arms.incoming']],time:event.time});pickups.delete(car.id);
-      if(event.weapon===11)swats+=previousShots.filter(s=>s.owner!==car.id&&s.kind!=='bull'&&Math.hypot(s.x-car.px,s.z-car.pz)<=18&&!w.arsenal.shots.some(t=>t.id===s.id)).length;
+      if(event.weapon===11)swats+=previousShots.filter(s=>s.owner!==car.id&&s.kind!=='hand'&&Math.hypot(s.x-car.px,s.z-car.pz)<=18&&!w.arsenal.shots.some(t=>t.id===s.id)).length;
     }
     if(event.type==='blast'&&event.weapon===1&&w.cars.some(c=>c.id!==event.owner&&health[c.id]>c.health&&Math.hypot(c.px-event.x,c.py-event.y,c.pz-event.z)<event.radius))rocketDamage++;
     // wheelOff/ko are nested inside applyDamage, before the enclosing blast.

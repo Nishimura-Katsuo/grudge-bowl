@@ -12,6 +12,7 @@ import './ui/style.css';
 
 import { PHYSICS_DT } from './sim/config.js';
 import { createWorld, stepWorld } from './sim/world.js';
+import { lineupFor } from './sim/roster.js';
 import { getTrack } from './sim/track.js';
 import { createBrain } from './ai/index.js';
 import { buildStage } from './render/stage.js';
@@ -163,6 +164,7 @@ function newRace() {
   state.brains = [];
   const world = createWorld({
     seed: state.seed,
+    lineup: lineupFor(state.seed),
     brainFactory: (car) => {
       const brain = createBrain(car);
       state.brains[car.id] = brain;
@@ -261,7 +263,7 @@ function handleEvent(e, world) {
         audio.foghorn(loudness);
         arsenalView.horn(e.x, e.y, e.z);
       } else if (key === 'threshingWhirl') audio.whirr(loudness);
-      else if (key === 'prizeBull') audio.moo(loudness);
+      else if (key === 'backhander') audio.windup(loudness);
       else if (key === 'barnBurner' || key === 'grudgeSeeker' || key === 'repoHook') audio.launch(loudness);
       else audio.clank(loudness);
       break;
@@ -277,9 +279,10 @@ function handleEvent(e, world) {
       effects.landing(e.x, e.y, e.z, 6);
       audio.boing(near(e.x, e.z));
       break;
-    case 'gored':
-      effects.impact(e.x, e.y + 0.6, e.z, 0, 0, 0.5, 0xb06a2c, 0xb06a2c);
-      audio.moo(near(e.x, e.z));
+    case 'slapped':
+      effects.impact(e.x, e.y + 1, e.z, 0, 0, e.final ? 1 : 0.6, 0xf3e2bd, 0xd9a27e);
+      effects.landing(e.x, e.y, e.z, e.final ? 9 : 5);
+      audio.slap(e.final ? 1 : 0.7, near(e.x, e.z));
       break;
     case 'cut':
       effects.impact(e.x, e.y, e.z, 0, 0, 0.45, 0x9aa0a6, 0x9aa0a6);

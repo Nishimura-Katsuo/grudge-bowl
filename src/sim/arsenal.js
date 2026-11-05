@@ -21,7 +21,7 @@ export const WEAPONS = [
   { key: 'threshingWhirl', name: 'Threshing Whirl', front: 2, back: 3 },
   { key: 'repoHook', name: 'Repo Hook', front: 2, back: 4, backHalf: true },
   { key: 'bedspring', name: 'Bedspring', front: 4, back: 1 },
-  { key: 'prizeBull', name: 'Prize Bull', front: 2, back: 4, backHalf: true },
+  { key: 'backhander', name: 'Backhander', front: 2, back: 4, backHalf: true },
   { key: 'grandPiano', name: 'Grand Piano', front: 1, back: 4 },
   { key: 'foghorn', name: 'Foghorn', front: 3, back: 2 },
 ];
@@ -206,11 +206,12 @@ export function fireWeapon(world, car) {
       addHazard(world, 'spring', x, z, A.spring, car.id, weapon);
       break;
     }
-    case WEAPON.prizeBull:
+    case WEAPON.backhander:
       target = raceLeader(world, car);
       addShot(world, {
-        kind: 'bull', owner: car.id, weapon, target: target?.id ?? -1, s: track.route(0, car.trackS + nose),
-        offset: 0, x: startX, y: startY, z: startZ, dx: fx, dz: fz, life: A.bull.life, cut: new Map(),
+        kind: 'hand', owner: car.id, weapon, target: target?.id ?? -1, s: track.route(0, car.trackS + nose),
+        offset: 0, x: startX, y: startY, z: startZ, dx: fx, dz: fz, life: A.hand.life, cut: new Map(),
+        swing: -1, victim: -1, pace: 0, side: 1, spent: false,
       });
       break;
     case WEAPON.grandPiano: {
@@ -229,7 +230,7 @@ export function fireWeapon(world, car) {
       break;
     }
     case WEAPON.foghorn:
-      a.shots = a.shots.filter((s) => s.owner === car.id || s.kind === 'bull'
+      a.shots = a.shots.filter((s) => s.owner === car.id || s.kind === 'hand'
         || Math.hypot(s.x - car.px, s.z - car.pz) > A.horn.radius);
       {
         // The horn stands at the centre of its own blast, so it lifts its owner
@@ -338,41 +339,85 @@ function stepShot(world, shot, dt) {
     }
     return shot.life > 0 && track.sdfAt(shot.x, shot.z) > 0.2;
   }
-  if (shot.kind === 'bull') {
-    const target = world.cars[shot.target];
-    shot.s = track.route(0, shot.s + A.bull.speed * dt);
-    if (target?.alive) {
-      const p = track.sample(target.trackS, PT);
-      const want = (target.px - p.x) * -p.tz + (target.pz - p.z) * p.tx;
-      const gap = track.route(shot.s, target.trackS);
-      if (gap < 90) shot.offset += (want - shot.offset) * Math.min(1, dt * 3);
-    }
-    const p = track.sample(shot.s, PT);
-    shot.dx = p.tx;
-    shot.dz = p.tz;
-    shot.x = p.x - p.tz * shot.offset;
-    shot.z = p.z + p.tx * shot.offset;
-    shot.y = track.heightAt(shot.x, shot.z);
-    for (const car of world.cars) {
-      if (car.towed || car.id === shot.owner) continue;
-      if ((car.px - shot.x) ** 2 + (car.pz - shot.z) ** 2 > A.bull.hitReach ** 2) continue;
-      if (Math.abs(car.py - shot.y) > A.bull.height) continue;
-      if (car.id === shot.target || !target?.alive) {
-        blast(world, shot.x, shot.y + 1, shot.z, A.bull, shot.owner, shot.weapon);
-        return false;
-      }
-      if ((shot.cut.get(car.id) ?? -9) > world.time - 1) continue;
-      shot.cut.set(car.id, world.time);
-      shove(car, shot.dx * A.bull.gore + (world.rng() - 0.5) * 6, A.bull.goreLift, shot.dz * A.bull.gore + (world.rng() - 0.5) * 6);
-      if (car.alive) weaponHit(world, world.cars[shot.owner], car, A.bull.goreDamage, car.px, car.pz, 0.5);
-      emit(world, { type: 'gored', victim: car.id, x: car.px, y: car.py, z: car.pz });
-    }
-    return shot.life > 0;
-  }
+  if (shot.kind === 'hand') return stepHand(world, shot, dt);
   return false;
 }
 
 const PT = { x: 0, z: 0, tx: 0, tz: 0, curvature: 0 };
+
+// A car's distance across the road, along the same axis as shot.offset.
+function roadSide(track, car) {
+  const p = track.sample(car.trackS, PT);
+  return (car.px - p.x) * -p.tz + (car.pz - p.z) * p.tx;
+}
+
+function canSlap(world, shot, car, reach) {
+  if (!car.alive || car.towed || car.id === shot.owner) return false;
+  if ((shot.cut.get(car.id) ?? -9) > world.time - A.hand.rehit) return false;
+  return (car.px - shot.x) ** 2 + (car.pz - shot.z) ** 2 <= reach ** 2 && Math.abs(car.py - shot.y) <= A.hand.height;
+}
+
+function slap(world, shot, car) {
+  const final = car.id === shot.target;
+  const push = final ? A.hand.finalPush : A.hand.push;
+  shot.cut.set(car.id, world.time);
+  shove(car, -shot.dz * shot.side * push + shot.dx * A.hand.drive, A.hand.lift, shot.dx * shot.side * push + shot.dz * A.hand.drive);
+  weaponHit(world, world.cars[shot.owner], car, final ? A.hand.finalDamage : A.hand.damage, car.px, car.pz, 0.5);
+  emit(world, { type: 'slapped', owner: shot.owner, victim: car.id, final, x: car.px, y: car.py, z: car.pz });
+  return final;
+}
+
+// The Backhander runs the road at the leader. Reaching any car stops it for one
+// swing: it falls in beside the car, draws back, and the palm lands on whatever
+// is under it. The slap sends a car down the road and in towards the middle, with
+// no spin: sideways or spinning, it cost the race ten seconds and the flag. A swing
+// that lands on the leader is its last.
+function stepHand(world, shot, dt) {
+  const track = world.track;
+  const victim = shot.swing >= 0 ? world.cars[shot.victim] : null;
+  const followed = victim ?? world.cars[shot.target];
+  if (victim && shot.swing < A.hand.windup) {
+    const ahead = track.route(shot.s, victim.trackS);
+    const gap = ahead > track.length / 2 ? ahead - track.length : ahead;
+    const left = Math.max(A.hand.windup - shot.swing, dt);
+    shot.s = track.route(0, shot.s + (shot.pace + (Math.abs(gap) < A.hand.reach * 2 ? gap / left : 0)) * dt);
+    shot.offset += (roadSide(track, victim) - shot.offset) * Math.min(1, dt / left);
+  } else {
+    shot.s = track.route(0, shot.s + (shot.swing >= 0 ? shot.pace : A.hand.speed) * dt);
+    if (followed?.alive && track.route(shot.s, followed.trackS) < 90) {
+      shot.offset += (roadSide(track, followed) - shot.offset) * Math.min(1, dt * 3);
+    }
+  }
+  const p = track.sample(shot.s, PT);
+  shot.dx = p.tx;
+  shot.dz = p.tz;
+  shot.x = p.x - p.tz * shot.offset;
+  shot.z = p.z + p.tx * shot.offset;
+  shot.y = track.heightAt(shot.x, shot.z);
+
+  if (shot.swing < 0) {
+    const car = world.cars.find((c) => canSlap(world, shot, c, A.hand.reach));
+    if (!car) return shot.life > 0;
+    const across = roadSide(track, car);
+    shot.swing = 0;
+    shot.victim = car.id;
+    shot.pace = Math.hypot(car.vx, car.vz);
+    shot.side = Math.abs(across) > 1 ? -Math.sign(across) : world.rng() < 0.5 ? -1 : 1;
+    return true;
+  }
+  const before = shot.swing;
+  shot.swing += dt;
+  if (before < A.hand.windup && shot.swing >= A.hand.windup) {
+    for (const car of world.cars) {
+      if (canSlap(world, shot, car, A.hand.palm) && slap(world, shot, car)) shot.spent = true;
+    }
+  }
+  if (shot.swing < A.hand.windup + A.hand.follow) return true;
+  shot.cut.set(shot.victim, world.time); // a clean miss doesn't get another go at once
+  shot.swing = -1;
+  shot.victim = -1;
+  return !shot.spent && shot.life > 0;
+}
 
 function stepHazard(world, h, dt) {
   h.life -= dt;

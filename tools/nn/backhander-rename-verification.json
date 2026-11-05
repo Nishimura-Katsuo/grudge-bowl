@@ -1,0 +1,75 @@
+{
+  "beforeSha256": "ebd81dc2cb4cfe3292cb5b8311c67eba5aeb628934c9dffdb32789347bdd62ed",
+  "afterSha256": "51fd25ae56065cc2af6b8dadab06421d4e1f71d36519bf0d82e1ea3efd74e8ef",
+  "onlyNameSubstitution": true,
+  "unchangedFields": [
+    "version",
+    "inputCount",
+    "layers",
+    "columns",
+    "weights",
+    "offsets",
+    "biases",
+    "activations",
+    "observationCount",
+    "paceShare",
+    "actions",
+    "stateOutputs",
+    "targets",
+    "modes",
+    "rageOutput",
+    "grudgeOutputs",
+    "crossingOutput"
+  ],
+  "renamed": [
+    {
+      "id": 261,
+      "before": "arms.prizeBull",
+      "after": "arms.backhander"
+    },
+    {
+      "id": 3126,
+      "before": "reserve.prizeBull",
+      "after": "reserve.backhander"
+    },
+    {
+      "id": 3191,
+      "before": "patience.prizeBull",
+      "after": "patience.backhander"
+    },
+    {
+      "id": 3247,
+      "before": "permission.prizeBull",
+      "after": "permission.backhander"
+    },
+    {
+      "id": 3315,
+      "before": "tactical.prizeBull",
+      "after": "tactical.backhander"
+    },
+    {
+      "id": 3369,
+      "before": "reason.prizeBull",
+      "after": "reason.backhander"
+    },
+    {
+      "id": 3401,
+      "before": "use.prizeBull",
+      "after": "use.backhander"
+    }
+  ],
+  "twiceRebuiltByteIdentical": true,
+  "layers": 131,
+  "units": 4155,
+  "edges": 7896,
+  "parameters": 12051,
+  "fullSuite": {
+    "tests": 182,
+    "passed": 182,
+    "failed": 0
+  },
+  "rosterTemperamentsChecked": 36,
+  "temperamentRangeCornersChecked": 8,
+  "localPathAuditPassed": true,
+  "historicalFilesUnchanged": true
+}

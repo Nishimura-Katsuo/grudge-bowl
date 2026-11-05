@@ -72,7 +72,7 @@ Defined in `src/sim/arsenal.js`, numbers in `ARSENAL` in `src/sim/config.js`. Si
 | `threshingWhirl` | Threshing Whirl | `closeRivals` above 0 | 1.3 s, two full spins. The car keeps its direction of travel with almost no tyre grip, finishes facing where it started, and cuts everything within 4 m. Steering does nothing during it. |
 | `repoHook` | Repo Hook | Rival 10 to 60 m ahead | Harpoon. If it hits, the two cars are reeled together for 1.5 s, mostly by pulling you forward. Only cars in the back half of the field find it. |
 | `bedspring` | Bedspring | Rival behind | Trap dropped behind. Fires the next car over it straight up, no damage. |
-| `prizeBull` | Prize Bull | Any time | Charges along the road at 82 m/s after the race leader, goring what it meets. Only cars in the back half find it. |
+| `backhander` | Backhander | Any time | A giant hand runs the road at 82 m/s after the race leader, stops for one swing at every car it reaches, and slaps them down the road. The swing that lands on the leader is its last. Only cars in the back half find it. |
 | `grandPiano` | Grand Piano | Any time | Lands 1.7 s later where the next car up is heading. |
 | `foghorn` | Foghorn | `closeRivals` above 0, or `incoming` high | Shoves everything within 18 m, swats rockets, harpoons and missiles out of the air. No damage. Does not move you. |
 

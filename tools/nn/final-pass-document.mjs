@@ -62,6 +62,7 @@ const acceptance=g=>{const a=g.original,m=g.final;return[
  ['Crates (historical 65% target)',`${f(m.collect,2)}% collected, ${f(m.liveMiss,2)}% live misses; ${status(m.collect>=65)}`]
  ];};
 let core=read('./road-pass2/NEURAL_NETWORK.md');core=core.slice(core.indexOf('## Runtime boundary'),core.indexOf('## Worked forward pass'));
+core=core.replaceAll('Prize Bull','Backhander');
 core=core.replace('produces no >10° slides in the current unarmed solo',`produces only ${f(solo.unarmed.movingSlipPercent,3)}% >10° sliding in the current unarmed solo`);
 core=core.replace('Clay grip 2.2 gives feed-forward brake 7.0875/(2.2*9.81)≈.328399.',`Current clay grip 2.3 gives feed-forward brake 7.0875/(2.3*9.81)≈${f(7.0875/(2.3*9.81),9)}.`);
 core=core.replace('mud .85, clay 1.1, asphalt 1.25','mud .885, clay 1.15, asphalt 1.3');
@@ -83,7 +84,7 @@ The simulator now has DAMAGE.scale=.00464, weapon damage/goreDamage at 80% of th
 |---|---|
 ${acceptance(allGroup).map(([n,x])=>`| ${n} | ${x} |`).join('\n')}
 
-The final simulator also bounds the Grudge Seeker's angular turn rate, including a target directly astern; crate pickup requires vertical reach of 2.6 m, Whirl requires vertical overlap within 2.4 m, and Prize Bull within 2.6 m. creditHit ignores victims already at zero health, preventing a later zero-damage touch from taking knockout credit. Sensor layout and weights are unchanged.
+The final simulator also bounds the Grudge Seeker's angular turn rate, including a target directly astern; crate pickup requires vertical reach of 2.6 m, Whirl requires vertical overlap within 2.4 m, and Backhander within 2.6 m. creditHit ignores victims already at zero health, preventing a later zero-damage touch from taking knockout credit. Sensor layout and weights are unchanged.
 
 The policy is byte-identical to the before checkpoint; race differences from the preceding report arise from these simulator fixes. Across all 50 races, ${all.flags} finish by laps and ${all.clocks} hit the clock. Race seconds are ${f(all.minT,1)}/${f(all.medianT,1)}/${f(all.maxT,1)} min/median/max; minimum running is ${all.minRunning}; median flag gap is ${all.gap} m and ${all.closeFlags} flag finishes are within 60 m. Stalled KOs are ${f(all.stalled,3)}/race. Total physical recovery is still not bounded by the network. All 50 rows agree field for field with a fresh execution of the owner's comparison script. The displayed maximum is ${f(all.maxT,1)} s; the raw maximum is ${f(all.maxRawT,3)} s, one 240 Hz step past the 200 s clock threshold. A literal ≤200 s raw limit therefore ${all.maxRawT<=200?'passes':'fails by that step'}. At least two running is ${status(all.minRunning>=2)}. Flag finishes are ${all.flags}/50 against the approximately 48/50 expectation: ${status(all.flags>=48)}. Clock seeds: ${final.filter(x=>!x.finishedByLaps).map(x=>x.seed).join(', ')}. No weights were changed in response.
 

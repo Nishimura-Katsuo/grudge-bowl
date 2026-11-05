@@ -184,8 +184,17 @@ export class Audio {
     this.tone(120, 820, 0.45, 'triangle', 0.55, near);
   }
 
-  moo(near) {
-    this.tone(150, 92, 0.9, 'sawtooth', 0.32, near);
+  // The breath before: a long pull of air as the sleeve goes up.
+  windup(near) {
+    this.hiss(700, 0.45, 0.4, near);
+    this.tone(90, 240, 0.45, 'sine', 0.22, near);
+  }
+
+  // A hard crack of air with a flat slab of meat underneath it.
+  slap(strength, near) {
+    this.hiss(3200, 0.09, 1.4 * strength, near);
+    this.tone(210, 70, 0.14, 'triangle', 0.9 * strength, near);
+    this.cheer(0.3 * strength);
   }
 
   whirr(near) {

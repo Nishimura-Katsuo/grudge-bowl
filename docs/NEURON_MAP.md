@@ -399,7 +399,7 @@ Each row computes activation(bias + sum(weight × source)). L0 has 277 observati
 | 258 | arms.threshingWhirl | 337, 3398 |
 | 259 | arms.repoHook | 337, 3399 |
 | 260 | arms.bedspring | 337, 3400 |
-| 261 | arms.prizeBull | 337, 3401 |
+| 261 | arms.backhander | 337, 3401 |
 | 262 | arms.grandPiano | 337, 3402 |
 | 263 | arms.foghorn | 337, 3403 |
 | 264 | arms.ready | 4127 |
@@ -3267,7 +3267,7 @@ Each row computes activation(bias + sum(weight × source)). L0 has 277 observati
 | 12 | 3123 | reserve.threshingWhirl | linear | -1 × v2909 + 1 | 3188 |
 | 12 | 3124 | reserve.repoHook | linear | -1 × v2909 + 1 | 3189 |
 | 12 | 3125 | reserve.bedspring | linear | -1 × v2909 + 1 | 3190 |
-| 12 | 3126 | reserve.prizeBull | linear | -1 × v2909 + 1 | 3191 |
+| 12 | 3126 | reserve.backhander | linear | -1 × v2909 + 1 | 3191 |
 | 12 | 3127 | reserve.grandPiano | linear | -1 × v2909 + 1 | 3192 |
 | 12 | 3128 | reserve.foghorn | linear | -1 × v2909 + 1 | 3193 |
 | 12 | 3129 | trafficLimit1.excess | relu | 1 × v2995 + -1 × v2783 + 0 | 3194 |
@@ -3332,7 +3332,7 @@ Each row computes activation(bias + sum(weight × source)). L0 has 277 observati
 | 13 | 3188 | patience.threshingWhirl | step | 1 × v1981 + 1 × v3123 + -1.5 | 3244 |
 | 13 | 3189 | patience.repoHook | step | 1 × v1981 + 1 × v3124 + -1.5 | 3245 |
 | 13 | 3190 | patience.bedspring | step | 1 × v1981 + 1 × v3125 + -1.5 | 3246 |
-| 13 | 3191 | patience.prizeBull | step | 1 × v1981 + 1 × v3126 + -1.5 | 3247 |
+| 13 | 3191 | patience.backhander | step | 1 × v1981 + 1 × v3126 + -1.5 | 3247 |
 | 13 | 3192 | patience.grandPiano | step | 1 × v1981 + 1 × v3127 + -1.5 | 3248 |
 | 13 | 3193 | patience.foghorn | step | 1 × v1981 + 1 × v3128 + -1.5 | 3249 |
 | 13 | 3194 | trafficLimit1 | linear | 1 × v2995 + -1 × v3129 + 0 | 3250, 3318 |
@@ -3388,7 +3388,7 @@ Each row computes activation(bias + sum(weight × source)). L0 has 277 observati
 | 14 | 3244 | permission.threshingWhirl | step | 1 × v1998 + 1 × v3188 + -0.5 | 3312 |
 | 14 | 3245 | permission.repoHook | step | 1 × v1999 + 1 × v3189 + -0.5 | 3313 |
 | 14 | 3246 | permission.bedspring | step | 1 × v1997 + 1 × v3190 + -0.5 | 3314 |
-| 14 | 3247 | permission.prizeBull | step | 1 × v1998 + 1 × v3191 + -0.5 | 3315 |
+| 14 | 3247 | permission.backhander | step | 1 × v1998 + 1 × v3191 + -0.5 | 3315 |
 | 14 | 3248 | permission.grandPiano | step | 1 × v1998 + 1 × v3192 + -0.5 | 3316 |
 | 14 | 3249 | permission.foghorn | step | 1 × v1998 + 1 × v3193 + -0.5 | 3317 |
 | 14 | 3250 | trafficLimit2.excess | relu | 1 × v3194 + -1 × v2784 + 0 | 3318 |
@@ -3456,7 +3456,7 @@ Each row computes activation(bias + sum(weight × source)). L0 has 277 observati
 | 15 | 3312 | tactical.threshingWhirl | step | 1 × v3244 + 1 × v2002 + -1.5 | 3366 |
 | 15 | 3313 | tactical.repoHook | step | 1 × v3245 + 1 × v1995 + -1.5 | 3367 |
 | 15 | 3314 | tactical.bedspring | step | 1 × v3246 + 1 × v2001 + -1.5 | 3368 |
-| 15 | 3315 | tactical.prizeBull | step | 1 × v3247 + 1 × v1996 + -1.5 | 3369 |
+| 15 | 3315 | tactical.backhander | step | 1 × v3247 + 1 × v1996 + -1.5 | 3369 |
 | 15 | 3316 | tactical.grandPiano | step | 1 × v3248 + 1 × v1996 + -1.5 | 3370 |
 | 15 | 3317 | tactical.foghorn | step | 1 × v3249 + 1 × v2179 + -1.5 | 3371 |
 | 15 | 3318 | trafficLimit2 | linear | 1 × v3194 + -1 × v3250 + 0 | 3372, 3404 |
@@ -3510,7 +3510,7 @@ Each row computes activation(bias + sum(weight × source)). L0 has 277 observati
 | 16 | 3366 | reason.threshingWhirl | step | 1 × v2000 + 1 × v3312 + -0.5 | 3398 |
 | 16 | 3367 | reason.repoHook | step | 1 × v2000 + 1 × v3313 + -0.5 | 3399 |
 | 16 | 3368 | reason.bedspring | step | 1 × v2000 + 1 × v3314 + -0.5 | 3400 |
-| 16 | 3369 | reason.prizeBull | step | 1 × v2000 + 1 × v3315 + -0.5 | 3401 |
+| 16 | 3369 | reason.backhander | step | 1 × v2000 + 1 × v3315 + -0.5 | 3401 |
 | 16 | 3370 | reason.grandPiano | step | 1 × v2000 + 1 × v3316 + -0.5 | 3402 |
 | 16 | 3371 | reason.foghorn | step | 1 × v2000 + 1 × v3317 + 1 × v437 + -0.5 | 3403 |
 | 16 | 3372 | trafficLimit3.excess | relu | 1 × v3318 + -1 × v2785 + 0 | 3404 |
@@ -3542,7 +3542,7 @@ Each row computes activation(bias + sum(weight × source)). L0 has 277 observati
 | 17 | 3398 | use.threshingWhirl | step | 1 × v258 + 1 × v3366 + -1.5 | 4113 |
 | 17 | 3399 | use.repoHook | step | 1 × v259 + 1 × v3367 + -1.5 | 4113 |
 | 17 | 3400 | use.bedspring | step | 1 × v260 + 1 × v3368 + -1.5 | 4113 |
-| 17 | 3401 | use.prizeBull | step | 1 × v261 + 1 × v3369 + -1.5 | 4113 |
+| 17 | 3401 | use.backhander | step | 1 × v261 + 1 × v3369 + -1.5 | 4113 |
 | 17 | 3402 | use.grandPiano | step | 1 × v262 + 1 × v3370 + -1.5 | 4113 |
 | 17 | 3403 | use.foghorn | step | 1 × v263 + 1 × v3371 + -1.5 | 4113 |
 | 17 | 3404 | trafficLimit3 | linear | 1 × v3318 + -1 × v3372 + 0 | 3476, 3546 |

@@ -78,7 +78,7 @@ const OPPONENT_FIELDS = [
 // Appended after the rivals, so everything above keeps its index. One `arms.<key>`
 // per weapon reads 1 while holding it; the rest are described in BOT_CONTRACT.md.
 const ARMS_FIELDS = [
-  ...['barnBurner', 'grudgeSeeker', 'welcomeMat', 'oilSlick', 'smokeBomb', 'threshingWhirl', 'repoHook', 'bedspring', 'prizeBull', 'grandPiano', 'foghorn'],
+  ...['barnBurner', 'grudgeSeeker', 'welcomeMat', 'oilSlick', 'smokeBomb', 'threshingWhirl', 'repoHook', 'bedspring', 'backhander', 'grandPiano', 'foghorn'],
   'ready',        // 1 while holding a weapon that can be used now
   'whirling',     // 1 during my own Threshing Whirl
   'blinded',      // 1 inside a smoke cloud

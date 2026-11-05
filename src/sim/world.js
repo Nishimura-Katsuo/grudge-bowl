@@ -33,6 +33,7 @@ export function createWorld(options = {}) {
     timeLimit = RULES.timeLimit,
     brainFactory = null,
     spawnOverride = null,
+    lineup = ROSTER,
   } = options;
 
   const track = getTrack();
@@ -45,7 +46,7 @@ export function createWorld(options = {}) {
     const side = gridSlot & 1 ? 1 : -1;
     const s = SPAWN_LAST_ROW_S + (carCount / 2 - row) * ROW_GAP;
     const spawn = spawnOverride ? spawnOverride(i, track) : gridSpawn(track, s, side);
-    cars.push(createCar(i, ROSTER[i % ROSTER.length], spawn, track));
+    cars.push(createCar(i, lineup[i % lineup.length], spawn, track));
   }
 
   const world = {

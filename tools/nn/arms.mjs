@@ -1,6 +1,6 @@
 import {ARSENAL} from '../../src/sim/config.js';
 // Construction only: perception, clocks and trigger predicates are neural rows.
-export const weaponKeys=['barnBurner','grudgeSeeker','welcomeMat','oilSlick','smokeBomb','threshingWhirl','repoHook','bedspring','prizeBull','grandPiano','foghorn'];
+export const weaponKeys=['barnBurner','grudgeSeeker','welcomeMat','oilSlick','smokeBomb','threshingWhirl','repoHook','bedspring','backhander','grandPiano','foghorn'];
 export function arms(c,{i,e,o,ground,slip,grudges,rage}){
   const a=n=>i('arms.'+n),not=(n,x)=>c.affine(n,[[x,-1]],1),or=(n,xs)=>c.step(n,xs.map(x=>[x,1]),-.5);
   const held=c.affine('weaponHeld',weaponKeys.map(k=>[a(k),1]));

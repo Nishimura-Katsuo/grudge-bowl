@@ -84,10 +84,10 @@ test('catch-up weapons never turn up in the front half', () => {
   };
   for (const pos of [0, 1, 3, 5]) {
     const seen = draw(pos);
-    assert.ok(!seen.has('prizeBull') && !seen.has('repoHook'), `P${pos + 1} drew a catch-up weapon`);
+    assert.ok(!seen.has('backhander') && !seen.has('repoHook'), `P${pos + 1} drew a catch-up weapon`);
   }
   const last = draw(11);
-  assert.ok(last.has('prizeBull') && last.has('repoHook'));
+  assert.ok(last.has('backhander') && last.has('repoHook'));
 });
 
 test('a blast on the ground leaves a car high overhead alone', () => {
@@ -167,7 +167,7 @@ test('the leader never finds the race-winning weapons in a crate', () => {
     collectCrates(world, car);
     seen.add(WEAPONS[car.weapon].key);
   }
-  for (const key of ['prizeBull', 'repoHook']) assert.ok(!seen.has(key), `leader got ${key}`);
+  for (const key of ['backhander', 'repoHook']) assert.ok(!seen.has(key), `leader got ${key}`);
   assert.ok(seen.size >= 8, `only ${seen.size} kinds`);
 });
 
@@ -312,16 +312,56 @@ test('Bedspring fires the next car into the sky without hurting it', () => {
   assert.equal(world.arsenal.hazards.length, 0, 'one use');
 });
 
-test('Prize Bull runs the road, tramples what is in the way, and gets the leader', () => {
+test('the Backhander runs the road, slaps what it touches, and finishes on the leader', () => {
   const world = arena([[STRAIGHT], [STRAIGHT + 40], [STRAIGHT + 150]]);
   const [me, between, leader] = world.cars;
   me.progress = 0; between.progress = 40; leader.progress = 150;
-  arm(world, me, 'prizeBull');
+  arm(world, me, 'backhander');
   assert.equal(world.arsenal.shots[0].target, leader.id);
-  seconds(world, 4);
+  seconds(world, 5);
   assert.equal(world.arsenal.shots.length, 0, 'spent on the leader');
-  assert.ok(leader.health < 1);
-  assert.ok(between.health < 1, 'gored on the way past');
+  assert.deepEqual(events(world, 'slapped').map((e) => [e.victim, e.final]), [[between.id, false], [leader.id, true]]);
+  assert.ok(between.health < 1);
+  assert.ok(leader.health < between.health, 'the last one is the big one');
+});
+
+test('a slap lands after the windup and sends the car down the road', () => {
+  const world = arena([[STRAIGHT], [STRAIGHT + 20, 3]], () => ({ act: () => [0, 0, 0, 0, 0, 0] }));
+  const [me, them] = world.cars;
+  me.progress = 0; them.progress = 20;
+  arm(world, me, 'backhander');
+  const swing = () => world.arsenal.shots[0]?.swing ?? -1;
+  while (swing() < 0) stepWorld(world);
+  assert.equal(them.health, 1, 'nothing yet: the hand is only drawing back');
+  const before = speed(them);
+  while (them.health === 1 && swing() < ARSENAL.hand.windup + 0.02) stepWorld(world);
+  assert.ok(swing() >= ARSENAL.hand.windup, 'palm lands at the end of the windup');
+  assert.ok(them.health < 1);
+  assert.ok(speed(them) > before + ARSENAL.hand.drive * 0.7, `shoved to ${speed(them)}`);
+});
+
+test('one swing slaps every car under the palm', () => {
+  const world = arena([[STRAIGHT], [STRAIGHT + 20, 1.6], [STRAIGHT + 21, -1.6], [STRAIGHT + 300]]);
+  const [me, a, b] = world.cars;
+  me.progress = 0; a.progress = 20; b.progress = 21; world.cars[3].progress = 300;
+  arm(world, me, 'backhander');
+  seconds(world, 1.2);
+  const hits = new Set(events(world, 'slapped').map((e) => e.victim));
+  assert.ok(hits.has(a.id) && hits.has(b.id), [...hits].join());
+});
+
+test('a Backhander whose target is gone keeps slapping until it runs out', () => {
+  const world = arena([[STRAIGHT], [STRAIGHT + 20], [STRAIGHT + 150]]);
+  const [me, between, leader] = world.cars;
+  me.progress = 0; between.progress = 20; leader.progress = 150;
+  arm(world, me, 'backhander');
+  leader.alive = false;
+  leader.towed = true;
+  seconds(world, 2);
+  assert.deepEqual(events(world, 'slapped').map((e) => e.victim), [between.id]);
+  assert.equal(world.arsenal.shots.length, 1, 'still going');
+  seconds(world, ARSENAL.hand.life);
+  assert.equal(world.arsenal.shots.length, 0);
 });
 
 test('Grand Piano warns first, then lands where the target is going', () => {
@@ -417,19 +457,17 @@ test('a whirl does not reach a car in the air overhead', () => {
   assert.equal(them.health, 1);
 });
 
-test('a bull runs under a car in the air', () => {
+test('the hand passes under a car high in the air', () => {
   const world = arena([[STRAIGHT], [STRAIGHT + 16]]);
   const [me, them] = world.cars;
   const ground = them.py;
-  arm(world, me, 'prizeBull');
-  let blasts = 0;
-  seconds(world, 1, (w) => {
-    them.py = ground + 9;
+  arm(world, me, 'backhander');
+  seconds(world, 1, () => {
+    them.py = ground + ARSENAL.hand.height + 3;
     them.vy = 0;
-    blasts += events(w, 'blast').length;
   });
   assert.equal(them.health, 1);
-  assert.equal(blasts, 0);
+  assert.equal(events(world, 'slapped').length, 0);
 });
 
 test('a crate is out of reach from high above it', () => {

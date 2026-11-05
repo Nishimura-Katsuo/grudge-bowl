@@ -55,7 +55,7 @@ button:focus-visible { outline: 3px solid var(--mustard); outline-offset: 2px; }
   font: 400 15px/1 var(--display);
   border: 2px solid var(--soot);
 }
-.name { font-weight: 700; font-size: 18px; line-height: 1; white-space: nowrap; overflow: hidden; }
+.name { font-weight: 700; font-size: calc(18px * var(--fit, 1)); line-height: 1; white-space: nowrap; overflow: hidden; }
 .meters { display: grid; gap: 2px; }
 .meters i { display: block; height: 7px; transform-origin: left; transform: scaleX(1); transition: transform .25s; }
 .hp { background: var(--barn-teal); }
@@ -213,7 +213,7 @@ body.scene #board, body.scene #feed, body.scene #focus { opacity: 0; visibility:
   #board h1 { font-size: 16px; margin-bottom: 5px; }
   .row-btn { grid-template-columns: 20px 1fr 34px; gap: 5px; height: 18px; }
   .num { height: 16px; font-size: 10px; border-width: 1px; }
-  .name { font-size: 13px; }
+  .name { font-size: calc(13px * var(--fit, 1)); }
   .score { display: none; }
   /* No room for the control bar as well: it comes back with the next race. */
   body.scene #controls { display: none; }

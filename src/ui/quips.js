@@ -134,14 +134,280 @@ const QUIPS = {
     brawler: ['They were parked too close. I fixed that.'],
     survivor: ["Finally, some peace and quiet. I'll be revving at dawn."],
   },
+  'REV. LIMITER': {
+    any: [
+      'Let us pray. Not for me. For {second}.',
+      'The Lord giveth, and at seven thousand rpm He taketh away.',
+      'And on the fifth lap, I rested.',
+    ],
+    clean: ['Without blemish, as the good book requires.'],
+    wrecked: ['I have been tested. Mostly by the wall.'],
+    brawler: ['Turn the other cheek, I said. Then I hit that one too.'],
+    survivor: ['The meek shall inherit the road. I appear to be the meek.'],
+  },
+  'CRASH TEST DEREK': {
+    any: [
+      "Data's looking great. I can't feel my legs, but the data's great.",
+      'Hit me again, {second}. For science.',
+      'Same time tomorrow? Same wall?',
+    ],
+    clean: ['No impacts recorded. This is the worst day of my career.'],
+    wrecked: ['Seven out of seven stars! Best crash of my life!'],
+    brawler: ['Turns out it\'s even better from the other side.'],
+    survivor: ['Everyone else failed the test. I passed it. I failed it upwards.'],
+  },
+  'THE LATE BARRY': {
+    any: [
+      'Late to everything for forty years. First across that line, though.',
+      "Don't feel bad, {second}. You can't lose what I've got left.",
+      "Someone tell my widow I won. She's got the good Ouija board.",
+    ],
+    clean: ['Not a scratch. They did a lovely job on me at the funeral home.'],
+    wrecked: ["Can't say it hurt. Can't say much of anything hurts now."],
+    brawler: ["They're with me now. Bit crowded in the back."],
+    survivor: ['Everyone passes eventually. I just got it over with early.'],
+  },
+  'ALAN IN ACCOUNTS': {
+    any: [
+      'As per my last email, I won.',
+      "That's a variance of one lap, {second}. I'll need a receipt.",
+      'I took a half day for this.',
+    ],
+    clean: ['No write-offs this quarter. I may allow myself a biscuit.'],
+    wrecked: ["The car depreciated rapidly, but it's still on the books."],
+    brawler: ['Those are what we call reductions in headcount.'],
+    survivor: ["The budget has been balanced. There's one of me left in it."],
+  },
+  'VLAD THE IMPOUNDER': {
+    any: [
+      'Your car is mine now. There is a fee.',
+      'Release form is in triplicate, {second}. In blood. Mostly yours.',
+      'The yard is open Monday to Never.',
+    ],
+    clean: ['Not one scratch upon the property of Vlad.'],
+    wrecked: ["Vlad's own car is also impounded. Vlad has charged himself."],
+    brawler: ['They were parked on my road. I have removed them.'],
+    survivor: ['Every car is in the yard. It is a good day for the yard.'],
+  },
+  'NO BRAKES NIGEL': {
+    any: [
+      "I'd love to stop and celebrate. I can't stop. Tell my wife.",
+      "Sorry {second}! Can't stop! Literally! Still going!",
+      'Are we finished? Someone put a wall up, would you?',
+    ],
+    clean: ['Not a scratch! Nobody dared get in front of me!'],
+    wrecked: ['Found the brakes! They were in the wall!'],
+    brawler: ['Excuse me! Sorry! Excuse me! Coming through! Sorry!'],
+    survivor: ['Everyone stopped. Must be nice. Must be really nice.'],
+  },
+  'DISCOUNT DAVE': {
+    any: [
+      'One careful owner, this win. Yours for nine ninety-nine.',
+      "Tell you what, {second}, I'll take second off your hands for a tenner.",
+      "Everything must go! It's all gone! Final reductions!",
+    ],
+    clean: ['Immaculate condition. Never raced. Ignore that I just raced it.'],
+    wrecked: ["That's not damage, that's character. Two hundred extra, that is."],
+    brawler: ['Lovely trade-ins, that lot. Terrible condition now.'],
+    survivor: ["Last one in stock! Get it while it's still got doors!"],
+  },
+  'SMUG HYBRID': {
+    any: [
+      'Zero emissions. Zero survivors. Well, some survivors.',
+      "I'd explain my fuel economy to you, {second}, but I already have.",
+      'Actually, the win is carbon neutral.',
+    ],
+    clean: ["Regenerative braking. You wouldn't understand. I'm very clean."],
+    wrecked: ["It's fine. It's fine. The battery's fully recyclable."],
+    brawler: ["You've all been offset."],
+    survivor: ['Your cars were already obsolete. Now they\'re also on fire.'],
+  },
+  'MASTER CYLINDER': {
+    any: [
+      'The brake pedal is the only pedal. Contemplate this.',
+      'To win is nothing. To lose is nothing. {second} is second.',
+      'Be like brake fluid, {second}. It also goes where it is pushed.',
+    ],
+    clean: ['I was never touched. There was no one there to touch.'],
+    wrecked: ['The car is broken. The car was always broken. Breathe.'],
+    brawler: ['I did not strike them. I merely stood where they were.'],
+    survivor: ['All things pass. I passed them.'],
+  },
+  'GOOD BOY': {
+    any: [
+      "Who's a good boy? It's me. I'm the good boy. I won the car thing.",
+      'I chased the cars! I CAUGHT the cars! What do I do now?',
+      'You throw it, {second}! Throw the flag! Throw it!',
+    ],
+    clean: ['No scratches! No bath! Best day!'],
+    wrecked: ["I ate part of the car. I don't regret it. I might be sick."],
+    brawler: ['They ran away so I bit them. With the car.'],
+    survivor: ["Everyone's gone? I'll wait here. I'm good at waiting."],
+  },
+  'PARCEL PETE': {
+    any: [
+      'Sorry I missed you, {second}. Left your trophy with a neighbour.',
+      'Signed for it myself. Nobody was in.',
+      'Attempted delivery of one defeat. Successful.',
+    ],
+    clean: ["Handle with care, it says. I don't know how that happened."],
+    wrecked: ['This side up. Not sure which side, mind.'],
+    brawler: ['All of those were thrown over a fence. Professionally.'],
+    survivor: ['Nobody home anywhere. Leaving a card on the whole track.'],
+  },
+  'BINGO BEV': {
+    any: [
+      'HOUSE! Hold on, wrong place. HOUSE anyway!',
+      'Two little ducks, {second}. And you came second. Quack quack.',
+      "Eyes down, love. That's the last you'll see of me.",
+    ],
+    clean: ['Full house and not a dab on me.'],
+    wrecked: ['Legs eleven. Well, four. Well, three now.'],
+    brawler: ["I've dabbed every one of you, my darlings."],
+    survivor: ["Everyone's gone for the bus, have they? More raffle for me."],
+  },
+  'CARAVAN CLIVE': {
+    any: [
+      'We stopped for a flask of tea on lap three. Still won.',
+      "You'd have got past, {second}, if this was a dual carriageway.",
+      'Forty years of holidays, and this is the nicest lay-by.',
+    ],
+    clean: ['Not one cup fell off the draining board.'],
+    wrecked: ["Awning's gone. Margaret's gone. Lovely weather, though."],
+    brawler: ['They wanted to overtake. That was their mistake.'],
+    survivor: ['Got the whole site to ourselves. Just how we like it.'],
+  },
+  'L-PLATE LIZ': {
+    any: [
+      'Was that... did I pass?',
+      'Sorry, {second}! I was looking for third gear!',
+      'My mum is going to be so upset about the car.',
+    ],
+    clean: ['Mirror, signal, manoeuvre. They really do work!'],
+    wrecked: ["I'd like to retake the parallel parking part."],
+    brawler: ['I thought that was the brake! All of those times!'],
+    survivor: ["Oh no. Oh no, they've all stopped. Was I supposed to stop?"],
+  },
+  'MINICAB MICK': {
+    any: [
+      "That'll be forty quid, {second}. Meter was running.",
+      'Had that trophy in the back of the cab once. Lovely fella.',
+      'I know a shortcut, and it goes through all of you.',
+    ],
+    clean: ['Five stars. Not a mark on her. Drove like an angel, I did.'],
+    wrecked: ["Cash only, mate. The card machine's in the wall back there."],
+    brawler: ["I don't do south of the river, and I don't do brakes."],
+    survivor: ["Quiet tonight, innit? Everyone's gone home or to the hospital."],
+  },
+  'VANILLA VINCE': {
+    any: [
+      'Nice little bumper, {second}. Shame if it melted.',
+      "You want sprinkles? You got sprinkles. It's glass.",
+      "Nobody walks away from Vince's van without paying.",
+    ],
+    clean: ["Not a drip on me. The boys'll tell you, I keep it clean."],
+    wrecked: ["It's a cone now. They made me a cone. Somebody's gonna pay."],
+    brawler: ['Two scoops. One for each of them. Capisce?'],
+    survivor: ["Everybody got what they ordered. The neighbourhood's quiet again."],
+  },
+  'JUST MARRIED': {
+    any: [
+      "Sorry I'm late, darling. I had to win this first.",
+      'You may now kiss my bumper, {second}.',
+      'Till death us do part. For most of them that was lap two.',
+    ],
+    clean: ['Not a petal out of place. Send the photographer.'],
+    wrecked: ['The cans fell off. The marriage might have too.'],
+    brawler: ['Someone objected. I drove over them.'],
+    survivor: ['Speak now or forever hold your peace. Nobody spoke.'],
+  },
+  'ESTATE AGENT': {
+    any: [
+      'A deceptively spacious lead, {second}. Viewing is recommended.',
+      'First place: sought-after, rarely available, no onward chain.',
+      'Characterful, this win. That means there was damp.',
+    ],
+    clean: ['Immaculately presented throughout. Must be seen.'],
+    wrecked: ['In need of some modernisation. Ideal for a keen investor.'],
+    brawler: ['Those properties have now come on the market as rubble.'],
+    survivor: ['An exclusive gated community of one.'],
+  },
+  FLATPACK: {
+    any: [
+      'There were six bolts left over. I feel great.',
+      'Step nine, {second}: insert defeat into slot B.',
+      'Some assembly required. Some assembly achieved.',
+    ],
+    clean: ['Everything still attached. Even the bits I put on backwards.'],
+    wrecked: ['The instructions never mentioned this part.'],
+    brawler: ['I used the little hex key on them.'],
+    survivor: ['Last one standing, which was never in the diagram.'],
+  },
+  'DR. WHIPLASH': {
+    any: [
+      'Have you or a loved one been overtaken by me? Call now.',
+      "That neck's not looking good, {second}. Who's your insurer?",
+      "I'll see you all in my waiting room.",
+    ],
+    clean: ['Not a scratch. Professionally, I find that very disappointing.'],
+    wrecked: ["It's soft tissue. It's all soft tissue. I want a settlement."],
+    brawler: ['First do no harm. I did this second.'],
+    survivor: ['My whole client list, one afternoon. Very efficient.'],
+  },
+  'GREASY SPOON': {
+    any: [
+      'Order up! One full English, hold the competition.',
+      "You want that with chips, {second}? You've got chips. Down both sides.",
+      "Extra grease. Always extra grease. That's the secret.",
+    ],
+    clean: ['Not a spot on me, which is a first for this establishment.'],
+    wrecked: ["Slightly burnt on one side. That's how we serve everything."],
+    brawler: ["Scrambled. All of 'em. Two minutes a side."],
+    survivor: ["Last sitting's over, love. We're closed."],
+  },
+  "LIL' LUGNUT": {
+    any: [
+      "I'M BIG! I'M SO BIG! DID YOU SEE HOW BIG I AM?",
+      'Hold me back! Hold me back, {second}!',
+      "My dad's a lorry. He says well done.",
+    ],
+    clean: ["They can't hit what they can't see. I'm VERY small."],
+    wrecked: ["Nobody's stronger than me. I've just got fewer parts now."],
+    brawler: ['I bit its ankle! I bit all the ankles!'],
+    survivor: ["Come on then! Who's next? Where's everyone going?"],
+  },
+  'HAZARD HAZEL': {
+    any: [
+      "I'll only be a minute. Just popping across this finish line.",
+      "It's fine, {second}, I've got my hazards on.",
+      "Hazards on means you can park anywhere. That's the law.",
+    ],
+    clean: ['Not a scratch. I always put my hazards on for safety.'],
+    wrecked: ["I can't think why they all hit me. I was only stopped on the bend."],
+    brawler: ['They could have gone round. There was a whole other lane.'],
+    survivor: ['Oh, has everyone gone? I was just waiting for someone.'],
+  },
+  'MR. CLIPBOARD': {
+    any: [
+      "That's a fail, {second}. Undue hesitation on the third lap.",
+      "Pull over here, please. I'm afraid that concludes your test.",
+      "I've marked all of you down. I've marked myself up.",
+    ],
+    clean: ['No minors. No majors. I shall still find something.'],
+    wrecked: ["A dangerous fault. I've noted it. It's me."],
+    brawler: ['Failure to give way. I made them give way.'],
+    survivor: ["I've examined everyone here. Pass rate: one."],
+  },
 };
 
 const FALLBACK = { any: ['First across the line, and not sorry about it.'] };
 const NOBODY = 'Nobody made it. The tractor drivers would like a word.';
 
-// Reads "SGT. DENT" as "Sgt. Dent" and "OL' SMOKEY" as "Ol' Smokey".
+// Reads "SGT. DENT" as "Sgt. Dent" and "VLAD THE IMPOUNDER" as "Vlad the Impounder".
 function spoken(name) {
-  return name.toLowerCase().replace(/(^|\s)(\S)/g, (_, gap, letter) => gap + letter.toUpperCase());
+  return name.toLowerCase()
+    .replace(/(^|\s)(\S)/g, (_, gap, letter) => gap + letter.toUpperCase())
+    .replace(/ (The|In) /g, (word) => word.toLowerCase());
 }
 
 // How the winner's race went, most telling first.

@@ -9,6 +9,8 @@ const SVG = 'http://www.w3.org/2000/svg';
 
 const hex = (n) => `#${n.toString(16).padStart(6, '0')}`;
 
+const NAME_FITS = 13; // characters that fit a board row at full size
+
 function readableInk(n) {
   const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
   return 0.299 * r + 0.587 * g + 0.114 * b > 140 ? '#1a1b20' : '#f3e2bd';
@@ -24,7 +26,7 @@ const FIRED = {
   threshingWhirl: (a) => `${a} is threshing`,
   repoHook: (a) => `${a} fired the Repo Hook`,
   bedspring: (a) => `${a} set a Bedspring`,
-  prizeBull: (a, b) => (b ? `${a} let the Prize Bull out. It wants ${b}.` : `${a} let the Prize Bull out`),
+  backhander: (a, b) => (b ? `${a} rolled up a sleeve. ${b} had this coming.` : `${a} rolled up a sleeve`),
   grandPiano: (a, b) => (b ? `${a} had a piano delivered to ${b}` : `${a} ordered a piano`),
   foghorn: (a) => `${a} leaned on the Foghorn`,
 };
@@ -83,6 +85,7 @@ export class Hud {
       const name = document.createElement('span');
       name.className = 'name';
       name.textContent = car.name;
+      name.style.setProperty('--fit', Math.min(1, NAME_FITS / car.name.length));
 
       const meters = document.createElement('span');
       meters.className = 'meters';
@@ -259,8 +262,8 @@ export class Hud {
       case 'sprung':
         this.feed(`${name(e.car)} found the Bedspring`, 'hit');
         break;
-      case 'gored':
-        this.feed(`The Prize Bull went through ${name(e.victim)}`, 'hit');
+      case 'slapped':
+        this.feed(e.final ? `${name(e.victim)} got the Backhander. Everyone heard it.` : `The Backhander caught ${name(e.victim)} on the way past`, 'hit');
         break;
       case 'pianoLands':
         this.feed(`Piano, delivered. Signature not required.`, 'hit');

@@ -4,7 +4,6 @@
 import * as THREE from 'three';
 import { ARSENAL } from '../sim/config.js';
 
-const BRONZE = new THREE.MeshStandardMaterial({ color: 0xb06a2c, metalness: 0.75, roughness: 0.35 });
 const STEEL = new THREE.MeshStandardMaterial({ color: 0x9aa0a6, metalness: 0.85, roughness: 0.3 });
 const SOOT = new THREE.MeshStandardMaterial({ color: 0x17181b, roughness: 0.7 });
 const RED = new THREE.MeshStandardMaterial({ color: 0xc8321f, roughness: 0.5 });
@@ -12,12 +11,17 @@ const MUSTARD = new THREE.MeshStandardMaterial({ color: 0xe8b023, roughness: 0.5
 const HOT = new THREE.MeshBasicMaterial({ color: 0xffb060 });
 const CREAM = new THREE.MeshStandardMaterial({ color: 0xf3e2bd, roughness: 0.6 });
 const LACQUER = new THREE.MeshStandardMaterial({ color: 0x0b0b0e, metalness: 0.2, roughness: 0.18 });
+const SKIN = new THREE.MeshStandardMaterial({ color: 0xdca582, roughness: 0.55 });
+const NAIL = new THREE.MeshStandardMaterial({ color: 0xf4dcd0, roughness: 0.25 });
+const SUIT = new THREE.MeshStandardMaterial({ color: 0x34477e, roughness: 0.6 });
 
-const SHARED_MATERIALS = new Set([BRONZE, STEEL, SOOT, RED, MUSTARD, HOT, CREAM, LACQUER]);
+const SHARED_MATERIALS = new Set([STEEL, SOOT, RED, MUSTARD, HOT, CREAM, LACQUER, SKIN, NAIL, SUIT]);
 
 const UP = new THREE.Vector3(0, 1, 0);
 const v = new THREE.Vector3();
 const w = new THREE.Vector3();
+
+const HAND_SCALE = 0.85;
 
 function canvasTexture(size, draw) {
   const c = document.createElement('canvas');
@@ -101,33 +105,110 @@ function buildHook() {
   return g;
 }
 
-function buildBull() {
+// Modelled fingers up with the palm towards +z, then laid flat on the wrist so the
+// fingers point down the road and the palm faces it. Pose it with poseHand().
+function buildHand() {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.5, 1.5), BRONZE);
-  body.position.y = 1.5;
-  const hump = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.6, 1.3), BRONZE);
-  hump.position.set(0.7, 2.4, 0);
-  const head = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1, 1), BRONZE);
-  head.position.set(2, 1.8, 0);
-  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.8), BRONZE);
-  nose.position.set(2.7, 1.55, 0);
-  g.add(body, hump, head, nose);
-  for (const side of [-1, 1]) {
-    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.16, 1, 8).rotateX((side * Math.PI) / 2).rotateY(0.4 * side), CREAM);
-    horn.position.set(2.1, 2.35, side * 0.8);
-    g.add(horn);
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 4), new THREE.MeshBasicMaterial({ color: 0xff2410 }));
-    eye.position.set(2.56, 2, side * 0.4);
-    g.add(eye);
-  }
-  const legs = [[1.1, 0.5], [1.1, -0.5], [-1.1, 0.5], [-1.1, -0.5]].map(([x, z]) => {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.1, 0.4).translate(0, -0.5, 0), BRONZE);
-    leg.position.set(x, 1, z);
-    g.add(leg);
-    return leg;
+  const wrist = new THREE.Group();
+  const flat = new THREE.Group();
+  flat.setRotationFromMatrix(new THREE.Matrix4().makeBasis(
+    new THREE.Vector3(0, 0, -1), new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, -1, 0),
+  ));
+  flat.scale.setScalar(HAND_SCALE);
+  wrist.add(flat);
+  g.add(wrist);
+
+  // Tapers away to nothing, so a chase camera sees the hand and not a sleeve end.
+  const sleeve = new THREE.Mesh(new THREE.ConeGeometry(1.5, 2.8, 14).rotateX(Math.PI), SUIT);
+  sleeve.position.y = -1.75;
+  const cuff = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.9, 14), CREAM);
+  cuff.position.y = 0.1;
+  const link = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), MUSTARD);
+  link.position.set(1.45, 0.1, 0);
+  const heel = new THREE.Mesh(new THREE.CylinderGeometry(1.45, 1.2, 1.2, 14), SKIN);
+  heel.scale.z = 0.5;
+  heel.position.y = 0.9;
+  const palm = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 12), SKIN);
+  palm.scale.set(1.95, 2.05, 0.68);
+  palm.position.y = 2.6;
+  flat.add(sleeve, cuff, link, heel, palm);
+
+  const fingers = [
+    { x: -1.4, length: 2.5, radius: 0.46, fan: 0.16 },
+    { x: -0.48, length: 3.1, radius: 0.5, fan: 0.05 },
+    { x: 0.48, length: 3.3, radius: 0.5, fan: -0.04 },
+    { x: 1.4, length: 2.9, radius: 0.48, fan: -0.15 },
+  ].map((f, i) => {
+    const near = f.length * 0.55, far = f.length * 0.45;
+    const finger = new THREE.Group();
+    finger.position.set(f.x, 4.2, 0);
+    const lower = new THREE.Mesh(new THREE.CapsuleGeometry(f.radius, near, 6, 12).translate(0, near / 2, 0), SKIN);
+    const joint = new THREE.Group();
+    joint.position.y = near;
+    const upper = new THREE.Mesh(new THREE.CapsuleGeometry(f.radius * 0.92, far, 6, 12).translate(0, far / 2, 0), SKIN);
+    const nail = new THREE.Mesh(new THREE.SphereGeometry(f.radius * 0.72, 10, 6), NAIL);
+    nail.scale.set(1, 1.15, 0.28);
+    nail.position.set(0, far + f.radius * 0.1, -f.radius * 0.72);
+    joint.add(upper, nail);
+    finger.add(lower, joint);
+    if (i === 1) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(f.radius + 0.06, 0.12, 8, 18).rotateX(Math.PI / 2), MUSTARD);
+      ring.position.y = near * 0.55;
+      finger.add(ring);
+    }
+    flat.add(finger);
+    return { finger, joint, fan: f.fan };
   });
-  g.userData.legs = legs;
+
+  const thumb = new THREE.Group();
+  thumb.position.set(1.75, 1.8, 0.2);
+  thumb.rotation.z = -0.95;
+  thumb.add(new THREE.Mesh(new THREE.CapsuleGeometry(0.6, 1.7, 6, 12).translate(0, 0.85, 0), SKIN));
+  flat.add(thumb);
+
+  g.userData.hand = { wrist, fingers, thumb };
   return g;
+}
+
+const easeIn = (u) => u * u * u;
+const easeOut = (u) => 1 - (1 - u) ** 3;
+const OVERHEAD = 7.5; // high enough to pass over a chase camera, not through it
+const ON_THE_ROOF = 2.2;
+const TO_THE_PALM = -2.8; // wrist behind the point where the palm lands
+const COCKED = 1.3; // fingers this far above level at the top of the swing
+
+// The pose comes from the sim's swing clock, so the palm lands on the step the
+// car is hit. Between cars it flies flat overhead. On a swing it drops and cocks
+// back at the wrist, comes down flat on the roof, stays a moment, and lifts away.
+function poseHand(mesh, shot, time) {
+  const { wrist, fingers, thumb } = mesh.userData.hand;
+  const { windup, follow } = ARSENAL.hand;
+  let height = OVERHEAD + Math.sin(time * 7) * 0.25, pitch = -0.1, splay = 0.4, curl = 0.3;
+  if (shot.swing >= 0 && shot.swing < windup) {
+    const u = shot.swing / windup;
+    const back = easeOut(Math.min(1, u / 0.6));
+    const whip = easeIn(Math.max(0, (u - 0.6) / 0.4));
+    const top = OVERHEAD - (OVERHEAD - 5) * back;
+    height = top + (ON_THE_ROOF - top) * whip;
+    pitch = -0.1 + (COCKED + 0.1) * back - COCKED * whip;
+    splay = 0.4 + back * 0.7 - whip * 0.9;
+    curl = 0.3 + back * 0.25 - whip * 0.65;
+  } else if (shot.swing >= windup) {
+    const u = (shot.swing - windup) / follow;
+    const lift = easeOut(Math.max(0, (u - 0.3) / 0.7));
+    height = ON_THE_ROOF + (OVERHEAD - ON_THE_ROOF) * lift;
+    pitch = Math.sin(lift * Math.PI) * 0.6 - 0.1 * lift;
+    splay = 0.2 + 0.2 * lift;
+    curl = -0.1 + 0.4 * lift;
+  }
+  wrist.position.set(TO_THE_PALM, height, 0);
+  wrist.rotation.z = pitch;
+  for (const f of fingers) {
+    f.finger.rotation.z = f.fan * (0.3 + splay * 1.6);
+    f.finger.rotation.x = curl * 0.6;
+    f.joint.rotation.x = curl;
+  }
+  thumb.rotation.z = -0.95 - splay * 0.5;
 }
 
 function buildSpring() {
@@ -249,7 +330,7 @@ export class ArsenalView {
     if (type === 'rocket') mesh = buildRocket();
     else if (type === 'seeker') mesh = buildSeeker();
     else if (type === 'hook') mesh = buildHook();
-    else if (type === 'bull') mesh = buildBull();
+    else if (type === 'hand') mesh = buildHand();
     else if (type === 'mine') mesh = new THREE.Mesh(this.matGeo, this.matMat);
     else if (type === 'spring') mesh = buildSpring();
     else if (type === 'oil') mesh = this.oilMesh(item);
@@ -328,10 +409,9 @@ export class ArsenalView {
       } else if (s.kind === 'seeker') {
         mesh.rotation.set(0, Math.atan2(-s.dz, s.dx), 0);
         fx.exhaust(s.x, s.y, s.z, dt, 0.7);
-      } else if (s.kind === 'bull') {
+      } else if (s.kind === 'hand') {
         mesh.rotation.set(0, Math.atan2(-s.dz, s.dx), 0);
-        mesh.userData.legs.forEach((leg, i) => { leg.rotation.z = Math.sin(time * 22 + (i % 3) * 2.1) * 0.7; });
-        fx.hoofDust(s.x, s.y, s.z, dt);
+        poseHand(mesh, s, time);
       }
       if (s.kind === 'hook') {
         const owner = visuals[s.owner];

@@ -555,15 +555,6 @@ export class Effects {
     }
   }
 
-  hoofDust(x, y, z, dt) {
-    const r = this.rng;
-    this.hoofAccum = (this.hoofAccum ?? 0) + dt * 40;
-    while (this.hoofAccum >= 1) {
-      this.hoofAccum -= 1;
-      this.soft.spawn(x + r.range(-1.4, 1.4), y + 0.2, z + r.range(-1.4, 1.4), r.range(-1, 1), r.range(0.3, 1.4), r.range(-1, 1), 1.1, r.range(0.7, 1.4), 0.62, 0.42, 0.28, 0.3, 1.8, 1);
-    }
-  }
-
   // A wall of smoke: as dense as the bots find it. Thins as it runs out.
   smokeCloud(x, y, z, radius, dt, share) {
     const r = this.rng;
