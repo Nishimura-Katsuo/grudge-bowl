@@ -463,13 +463,14 @@ function latheFacets(out, profile, color, sides = 18) {
 }
 
 // A chunky tyre on a plain painted steel wheel. Shared by every car: only the pose differs.
-function buildWheelGeometry() {
+export function buildWheelGeometry() {
   const r = CAR.wheelRadius;
   const out = new Facets();
   const rubber = tinted(0x171618), cream = tinted(0xf0e2c6), hub = tinted(0xc9b797);
   latheFacets(out, [[0.215, -0.112], [0.3, -0.122], [r - 0.02, -0.112], [r, -0.09], [r, 0.09], [r - 0.02, 0.112], [0.3, 0.122], [0.215, 0.112]], rubber);
-  latheFacets(out, [[0.002, 0.096], [0.075, 0.098], [0.1, 0.09], [0.17, 0.086], [0.205, 0.106], [0.218, 0.114]], cream, 12);
-  latheFacets(out, [[0.218, -0.114], [0.205, -0.106], [0.17, -0.086], [0.1, -0.09], [0.075, -0.098], [0.002, -0.096]], cream, 12);
+  // A lathe faces left of the way its profile runs, so the rim's outer faces run inwards.
+  latheFacets(out, [[0.218, 0.114], [0.205, 0.106], [0.17, 0.086], [0.1, 0.09], [0.075, 0.098], [0.002, 0.096]], cream, 12);
+  latheFacets(out, [[0.002, -0.096], [0.075, -0.098], [0.1, -0.09], [0.17, -0.086], [0.205, -0.106], [0.218, -0.114]], cream, 12);
   for (let i = 0; i < 5; i++) {
     const a = i * Math.PI * 2 / 5;
     const [x, z] = [Math.cos(a) * 0.135, Math.sin(a) * 0.135];

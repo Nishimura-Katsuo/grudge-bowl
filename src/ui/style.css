@@ -124,8 +124,8 @@ button:focus-visible { outline: 3px solid var(--mustard); outline-offset: 2px; }
 }
 
 /* Suno's player, in the corner while it plays. */
-#radio { position: fixed; right: 14px; bottom: 14px; width: 320px; transform-origin: right bottom; }
-#radio iframe { display: block; width: 320px; height: 102px; border: 0; }
+#radio { position: fixed; right: 14px; bottom: 14px; width: 340px; transform-origin: right bottom; }
+#radio iframe { display: block; width: 340px; height: 108px; border: 0; }
 #radio:empty { display: none; }
 
 /* Title and finish cards: a fair poster, nailed up over the picture. */

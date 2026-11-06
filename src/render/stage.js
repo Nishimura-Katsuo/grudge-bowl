@@ -4,6 +4,10 @@
 import * as THREE from 'three';
 import { FINISH_LINE_S, GRID_LINE_S, SURFACE } from '../sim/config.js';
 import { createRng } from '../sim/math.js';
+import {
+  assemble, broadleafTree, crushedCar, fencePost, ferrisWheel, floodlamp, lightTower, marshalTower, pineTree,
+  spectatorBody, spectatorHat, spectatorHead, stackedTyre, strut, waterTower, wheelBulbs,
+} from './props.js';
 
 const SUN_DIR = new THREE.Vector3(-0.62, 0.3, 0.72).normalize();
 const FENCE_FOOT = 1.1; // top of the barrier
@@ -11,6 +15,8 @@ const FENCE_TOP = 4.6;
 const FENCE_MESH = 0.9; // metres per diamond
 
 // Runs of stands as [crossroads pass, metres past it], outside the three loops.
+const FENCE_POST_GAP = 6;
+
 const STAND_SPANS = [
   [[1, 30], [1, 190]],
   [[3, 72], [3, 230]],
@@ -27,6 +33,7 @@ export function buildStage(scene, track) {
   scene.add(buildTerrain(track));
   scene.add(buildBarriers(track));
   scene.add(buildCatchFence(track));
+  scene.add(buildFencePosts(track));
   scene.add(buildGrandstands(track, rng));
   scene.add(buildInfield(track, rng));
   scene.add(buildJumpGantries(track));
@@ -455,71 +462,166 @@ function buildCatchFence(track) {
   return new THREE.Mesh(geo, mat);
 }
 
+// One material that takes its colour from the shape, and an instance tint if it has one.
+const painted = (roughness = 0.85) => new THREE.MeshStandardMaterial({ vertexColors: true, roughness });
+
+function solid(geometry, material = painted(), shadow = true) {
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = shadow;
+  mesh.receiveShadow = shadow;
+  return mesh;
+}
+
+// The same shape, many times. `place` poses `dummy` and sets `tint` for each one.
+function instanced(geometry, material, count, place) {
+  const mesh = new THREE.InstancedMesh(geometry, material, count);
+  const dummy = new THREE.Object3D();
+  const tint = new THREE.Color(1, 1, 1);
+  for (let i = 0; i < count; i++) {
+    place(dummy, tint, i);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(i, dummy.matrix);
+    mesh.setColorAt(i, tint);
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  mesh.computeBoundingSphere();
+  return mesh;
+}
+
+function buildFencePosts(track) {
+  const spots = [];
+  for (const poly of track.polys) {
+    let carried = 0;
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i], b = poly[(i + 1) % poly.length];
+      const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      let at = FENCE_POST_GAP - carried;
+      while (at < length) {
+        const t = at / length;
+        spots.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+        at += FENCE_POST_GAP;
+      }
+      carried = length - (at - FENCE_POST_GAP);
+    }
+  }
+  return instanced(fencePost(FENCE_TOP), painted(), spots.length, (dummy, tint, i) => {
+    const [x, z] = spots[i];
+    dummy.position.set(x, track.heightAt(x, z), z);
+  });
+}
+
+const SHIRTS = [0xc8321f, 0xe8b023, 0x1f6b6b, 0xf3e2bd, 0x34404f, 0x8a5a33, 0x9aa8b6, 0xc77a36, 0x3f5e8c, 0xe9e4d8, 0x7a2d3a];
+const SKIN = [0xf0c9a4, 0xd9a77e, 0xb57f55, 0x8a5a3a, 0x5e3c28, 0xe8bd96];
+const HATS = [0xdcc48a, 0xc8321f, 0x2a2c35, 0x1f6b6b, 0xe9e4d8];
+
+// A crowd of one span, in three instanced meshes so a stand off camera costs nothing.
+function buildCrowd(seats, rng) {
+  const group = new THREE.Group();
+  const pick = (list) => list[Math.floor(rng() * list.length)];
+  const pose = (dummy, seat) => {
+    dummy.position.set(seat.x, seat.y, seat.z);
+    dummy.rotation.set(0, seat.yaw, 0);
+    dummy.scale.setScalar(seat.size);
+  };
+  const shared = { seated: painted(0.9), head: painted(0.8) };
+  for (const cheering of [false, true]) {
+    const some = seats.filter((seat) => seat.cheering === cheering);
+    if (some.length === 0) continue;
+    group.add(instanced(spectatorBody(cheering), shared.seated, some.length, (dummy, tint, i) => {
+      pose(dummy, some[i]);
+      tint.setHex(pick(SHIRTS));
+    }));
+  }
+  group.add(instanced(spectatorHead(), shared.head, seats.length, (dummy, tint, i) => {
+    pose(dummy, seats[i]);
+    tint.setHex(pick(SKIN));
+  }));
+  const hatted = seats.filter((seat) => seat.hat);
+  group.add(instanced(spectatorHat(), shared.head, hatted.length, (dummy, tint, i) => {
+    pose(dummy, hatted[i]);
+    tint.setHex(pick(HATS));
+  }));
+  return group;
+}
+
 function buildGrandstands(track, rng) {
   const group = new THREE.Group();
   const tiers = 8;
   const concrete = new THREE.MeshStandardMaterial({ color: 0x8a7a68, roughness: 0.95, side: THREE.DoubleSide });
+  const wood = new THREE.MeshStandardMaterial({ color: 0x8c6a42, roughness: 0.85, side: THREE.DoubleSide });
+  const steel = [];
   const positions = [];
-  const indices = [];
-  const seats = [];
+  const benches = [];
   const c = track.centre;
   const clear = (x, z) => track.sdfAt(x, z) < -2.5;
+  const quad = (list, a, b, d, e) => list.push(...a, ...b, ...d, ...a, ...d, ...e);
 
-  for (const [from, to] of STAND_SPANS.map((span) => span.map((v) => track.passes[v[0]].s + v[1]))) {
+  STAND_SPANS.map((span) => span.map((v) => track.passes[v[0]].s + v[1])).forEach(([from, to]) => {
+    const seats = [];
     for (let t = 0; t < tiers; t++) {
       const y = 2.3 + t * 0.95;
       const near = 5.5 + t * 1.5;
-      let prev = null;
-      for (let s = from; s <= to; s += 3) {
+      const riser = t === 0 ? y : 0.97;
+      let last = null;
+      const wall = (p) => quad(positions, [p.x0, y, p.z0], [p.x1, y, p.z1], [p.x1, 0, p.z1], [p.x0, 0, p.z0]);
+      for (let s = from; s <= to + 3; s += 3) {
         const i = track.indexAt(s);
         // Every corner here is a right-hander, so the outside is on the left.
         const nx = c.tz[i], nz = -c.tx[i];
         const r = track.hw[i] + near;
         const x0 = c.px[i] + nx * r, z0 = c.pz[i] + nz * r;
         const x1 = x0 + nx * 1.6, z1 = z0 + nz * 1.6;
-        if (!clear(x0, z0) || !clear(x1, z1)) { prev = null; continue; }
-        const base = positions.length / 3;
-        positions.push(x0, y, z0, x1, y, z1, x1, y - 0.97, z1, x0, y - 0.97, z0);
-        if (prev !== null) {
-          indices.push(prev, base, prev + 1, prev + 1, base, base + 1);
-          indices.push(prev + 3, base + 3, prev, prev, base + 3, base);
+        const here = s <= to && clear(x0, z0) && clear(x1, z1) ? { x0, z0, x1, z1, nx, nz, i } : null;
+        // A stand stops in a stepped end wall, not an open edge.
+        if (here && !last) wall(here);
+        if (!here && last) wall(last);
+        if (here && last) {
+          quad(positions, [last.x0, y, last.z0], [here.x0, y, here.z0], [here.x1, y, here.z1], [last.x1, y, last.z1]);
+          quad(positions, [last.x0, y - riser, last.z0], [here.x0, y - riser, here.z0], [here.x0, y, here.z0], [last.x0, y, last.z0]);
+          if (t === tiers - 1) {
+            quad(positions, [last.x1, y + 1.4, last.z1], [here.x1, y + 1.4, here.z1], [here.x1, 0, here.z1], [last.x1, 0, last.z1]);
+          }
+          const bench = (p, out) => [p.x0 + p.nx * out, y + 0.45, p.z0 + p.nz * out];
+          const low = (p, out) => [p.x0 + p.nx * out, y, p.z0 + p.nz * out];
+          quad(benches, bench(last, 0.72), bench(here, 0.72), bench(here, 1.14), bench(last, 1.14));
+          quad(benches, low(last, 0.72), low(here, 0.72), bench(here, 0.72), bench(last, 0.72));
         }
-        prev = base;
-        for (let k = 0; k < 4; k++) {
-          if (rng() < 0.3) continue;
-          const u = rng() * 3, v = 0.5 + rng() * 0.7;
-          const tx = c.tx[i] * u, tz = c.tz[i] * u;
-          seats.push([x0 + tx + nx * v, y + 0.42 + rng() * 0.08, z0 + tz + nz * v, rng() * Math.PI]);
+        // Every tenth bay is an aisle, with nobody in it.
+        const bay = Math.round((s - from) / 3);
+        if (here && bay % 10 !== 0) {
+          for (let k = 0; k < 4; k++) {
+            if (rng() < 0.22) continue;
+            const u = 0.38 + k * 0.75 + rng() * 0.06, v = 0.95 + rng() * 0.05;
+            seats.push({
+              x: x0 + c.tx[i] * u + nx * v, y, z: z0 + c.tz[i] * u + nz * v,
+              yaw: Math.atan2(-nx, -nz) + (rng() - 0.5) * 0.7,
+              size: 0.94 + rng() * 0.14,
+              cheering: rng() < 0.14,
+              hat: rng() < 0.42,
+            });
+          }
+          // Handrail along the front of the lowest tier.
+          if (t === 0 && last) steel.push(strut([x0 - nx * 0.15, y, z0 - nz * 0.15], [x0 - nx * 0.15, y + 1, z0 - nz * 0.15], 0.035, 0x4b4640, 4));
+          if (t === 0 && last) steel.push(strut([last.x0 - last.nx * 0.15, y + 1, last.z0 - last.nz * 0.15], [x0 - nx * 0.15, y + 1, z0 - nz * 0.15], 0.04, 0x4b4640, 4));
         }
+        last = here;
       }
     }
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geo.setIndex(indices);
-  geo.computeVertexNormals();
-  const stands = new THREE.Mesh(geo, concrete);
-  stands.receiveShadow = true;
-  group.add(stands);
-
-  const crowd = new THREE.InstancedMesh(
-    new THREE.BoxGeometry(0.46, 0.8, 0.42),
-    new THREE.MeshStandardMaterial({ roughness: 0.9 }),
-    seats.length,
-  );
-  const palette = [0xc8321f, 0xe8b023, 0x1f6b6b, 0xf3e2bd, 0x2a2c35, 0x7a4d2b, 0x8e9aa8, 0xb86a2e, 0x3f5e8c];
-  const dummy = new THREE.Object3D();
-  const color = new THREE.Color();
-  seats.forEach((seat, i) => {
-    dummy.position.set(seat[0], seat[1], seat[2]);
-    dummy.rotation.y = seat[3];
-    dummy.updateMatrix();
-    crowd.setMatrixAt(i, dummy.matrix);
-    color.setHex(palette[Math.floor(rng() * palette.length)]);
-    crowd.setColorAt(i, color);
+    group.add(buildCrowd(seats, rng));
   });
-  crowd.instanceMatrix.needsUpdate = true;
-  group.add(crowd);
+
+  const sheet = (list, material) => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(list, 3));
+    geo.computeVertexNormals();
+    const mesh = new THREE.Mesh(geo, material);
+    mesh.receiveShadow = true;
+    group.add(mesh);
+  };
+  sheet(positions, concrete);
+  sheet(benches, wood);
+  group.add(solid(assemble(steel)));
   return group;
 }
 
@@ -560,15 +662,14 @@ function loopCentre(poly) {
 
 function buildInfield(track, rng) {
   const group = new THREE.Group();
-  const scrapColours = [0x6e4530, 0x52555a, 0x7a2d20, 0x3f5e4a, 0x8a7a3a];
-  const box = new THREE.BoxGeometry(1, 1, 1);
-  const mats = scrapColours.map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.75, metalness: 0.2 }));
+  const scrapColours = [0x8a5a3c, 0x6a6d72, 0x96392a, 0x4f7560, 0xa8974a, 0x3f5e8c, 0x6b3a2a];
 
   // The longest wall loop runs round the outside. The rest enclose infields.
   const loops = track.polys.map(loopCentre).sort((a, b) => b.reach - a.reach).slice(1);
   const lobes = loops.filter((l) => l.reach > 30);
 
-  // Stacks of past contestants in each loop.
+  // Stacks of past contestants in each loop, crushed and left in piles.
+  const wrecks = [[], [], []];
   for (const lobe of lobes) {
     for (let k = 0; k < 14; k++) {
       const a = rng() * Math.PI * 2;
@@ -579,35 +680,34 @@ function buildInfield(track, rng) {
       const layers = 1 + Math.floor(rng() * 4);
       const yaw = rng() * Math.PI;
       for (let l = 0; l < layers; l++) {
-        const m = new THREE.Mesh(box, mats[Math.floor(rng() * mats.length)]);
-        m.scale.set(4.6, 0.85, 1.9);
-        m.position.set(baseX + (rng() - 0.5) * 0.5, 0.45 + l * 0.86, baseZ + (rng() - 0.5) * 0.5);
-        m.rotation.set((rng() - 0.5) * 0.08, yaw + (rng() - 0.5) * 0.3, (rng() - 0.5) * 0.08);
-        m.castShadow = true;
-        group.add(m);
+        wrecks[Math.floor(rng() * wrecks.length)].push({
+          x: baseX + (rng() - 0.5) * 0.5, y: 0.45 + l * 0.86, z: baseZ + (rng() - 0.5) * 0.5,
+          pitch: (rng() - 0.5) * 0.08, yaw: yaw + (rng() - 0.5) * 0.3 + (rng() < 0.5 ? Math.PI : 0), roll: (rng() - 0.5) * 0.08,
+          paint: scrapColours[Math.floor(rng() * scrapColours.length)],
+        });
       }
     }
   }
+  const scrapMaterial = painted(0.8);
+  wrecks.forEach((pile, variant) => {
+    if (pile.length === 0) return;
+    const mesh = instanced(crushedCar(31 + variant * 7), scrapMaterial, pile.length, (dummy, tint, i) => {
+      const w = pile[i];
+      dummy.position.set(w.x, w.y, w.z);
+      dummy.rotation.set(w.pitch, w.yaw, w.roll);
+      tint.setHex(w.paint);
+    });
+    mesh.castShadow = true;
+    group.add(mesh);
+  });
 
   // Water towers with the only signs anyone reads.
   lobes.forEach((lobe, i) => {
     const warm = i % 2 === 0;
-    const legMat = new THREE.MeshStandardMaterial({ color: 0x3a3028, roughness: 0.8 });
-    for (const [lx, lz] of [[-3, -3], [3, -3], [-3, 3], [3, 3]]) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.26, 18, 6), legMat);
-      leg.position.set(lobe.x + lx, 9, lobe.z + lz);
-      group.add(leg);
-    }
-    const tank = new THREE.Mesh(
-      new THREE.CylinderGeometry(6, 6, 7, 20),
-      new THREE.MeshStandardMaterial({ color: warm ? 0xe8b023 : 0xc8321f, roughness: 0.6 }),
-    );
-    tank.position.set(lobe.x, 21, lobe.z);
-    tank.castShadow = true;
-    group.add(tank);
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(6.4, 2.6, 20), new THREE.MeshStandardMaterial({ color: 0x3a3028 }));
-    cap.position.set(lobe.x, 25.8, lobe.z);
-    group.add(cap);
+    const tower = solid(waterTower(warm ? 0xe8b023 : 0xc8321f), painted(0.7));
+    tower.position.set(lobe.x, 0, lobe.z);
+    tower.name = 'waterTower';
+    group.add(tower);
     for (const face of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
       const sign3d = makeSign('GRUDGE BOWL', 8.2, 3.4, warm ? '#e8b023' : '#c8321f', warm ? '#c8321f' : '#f3e2bd');
       sign3d.position.set(lobe.x + Math.sin(face) * 6.05, 21, lobe.z + Math.cos(face) * 6.05);
@@ -617,12 +717,7 @@ function buildInfield(track, rng) {
   });
 
   // Tyre stacks on every barrier point at a crossroads. Decorative: the barrier does the stopping.
-  const tyre = new THREE.CylinderGeometry(0.55, 0.55, 0.32, 14);
-  const rubber = new THREE.MeshStandardMaterial({ color: 0x17181b, roughness: 0.9 });
-  const tyres = new THREE.InstancedMesh(tyre, rubber, track.crossings.length * 4 * 7 * 3);
-  tyres.castShadow = true;
-  const dummy = new THREE.Object3D();
-  let count = 0;
+  const stacks = [];
   for (const point of goreNoses(track)) {
     const outX = point.x - point.cx, outZ = point.z - point.cz;
     const l = Math.hypot(outX, outZ) || 1;
@@ -630,31 +725,25 @@ function buildInfield(track, rng) {
     for (let k = 0; k < 7; k++) {
       for (let h = 0; h < 3; h++) {
         const along = (k - 3) * 1.05, back = 0.8 + Math.abs(k - 3) * 0.5;
-        dummy.position.set(point.x + ux * back - uz * along, 0.18 + h * 0.33, point.z + uz * back + ux * along);
-        dummy.updateMatrix();
-        tyres.setMatrixAt(count++, dummy.matrix);
+        stacks.push({ x: point.x + ux * back - uz * along, y: 0.18 + h * 0.33, z: point.z + uz * back + ux * along, paint: h === 2 ? (k % 2 ? 0xc8321f : 0xe6dfd0) : 0x17181b });
       }
     }
   }
-  tyres.count = count;
-  tyres.instanceMatrix.needsUpdate = true;
+  const tyres = instanced(stackedTyre(), painted(0.9), stacks.length, (dummy, tint, i) => {
+    const t = stacks[i];
+    dummy.position.set(t.x, t.y, t.z);
+    dummy.rotation.y = i * 1.7;
+    tint.setHex(t.paint);
+  });
+  tyres.castShadow = true;
   group.add(tyres);
 
   // The marshal's tower stands on the triangle in the middle of the three crossroads.
   const heart = centreOfCrossroads(track);
-  const steel = new THREE.MeshStandardMaterial({ color: 0x2f2c2c, roughness: 0.7 });
-  for (const [lx, lz] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) {
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 16, 6), steel);
-    leg.position.set(heart.x + lx, 8, heart.z + lz);
-    group.add(leg);
-  }
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.4, 6.4), steel);
-  deck.position.set(heart.x, 16.2, heart.z);
-  deck.castShadow = true;
-  group.add(deck);
-  const hut = new THREE.Mesh(new THREE.BoxGeometry(5, 2.4, 5), new THREE.MeshStandardMaterial({ color: 0xc8321f, roughness: 0.7 }));
-  hut.position.set(heart.x, 17.6, heart.z);
-  group.add(hut);
+  const marshal = solid(marshalTower(), painted(0.7));
+  marshal.position.set(heart.x, 0, heart.z);
+  marshal.name = 'marshalTower';
+  group.add(marshal);
   return group;
 }
 
@@ -686,7 +775,7 @@ export function centreOfCrossroads(track) {
 
 function buildJumpGantries(track) {
   const group = new THREE.Group();
-  const steel = new THREE.MeshStandardMaterial({ color: 0x2f2c2c, roughness: 0.7 });
+  const steel = painted(0.7);
   const c = track.centre;
   for (const j of track.jumps) {
     const i = track.indexAt(j.lipS - 20);
@@ -694,12 +783,17 @@ function buildJumpGantries(track) {
     const nx = -c.tz[i], nz = c.tx[i];
     const base = track.heightAt(c.px[i], c.pz[i]);
     const yaw = Math.atan2(c.tx[i], c.tz[i]);
+    const frame = [];
     for (const side of [1, -1]) {
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 7.6, 6), steel);
-      post.position.set(c.px[i] + nx * side * (hw + 0.8), base + 3.8, c.pz[i] + nz * side * (hw + 0.8));
-      post.castShadow = true;
-      group.add(post);
+      const px = c.px[i] + nx * side * (hw + 0.8), pz = c.pz[i] + nz * side * (hw + 0.8);
+      frame.push(strut([px, base, pz], [px, base + 8, pz], 0.2, 0x2f2c2c, 6));
+      frame.push(strut([px - c.tx[i] * 1.8, base, pz - c.tz[i] * 1.8], [px, base + 3.8, pz], 0.09, 0x2f2c2c));
+      frame.push(strut([px + c.tx[i] * 1.8, base, pz + c.tz[i] * 1.8], [px, base + 3.8, pz], 0.09, 0x2f2c2c));
     }
+    const across = (side, y) => [c.px[i] + nx * side * (hw + 0.8), base + y, c.pz[i] + nz * side * (hw + 0.8)];
+    frame.push(strut(across(1, 7.85), across(-1, 7.85), 0.09, 0x2f2c2c));
+    frame.push(strut(across(1, 5.95), across(-1, 5.95), 0.09, 0x2f2c2c));
+    group.add(solid(assemble(frame), steel));
     // One panel per face, so the name reads from both directions.
     for (const face of [0, 1]) {
       const panel = makeSign(j.name.toUpperCase(), hw * 2 + 1.4, 1.7, '#c8321f', '#f3e2bd');
@@ -714,11 +808,6 @@ function buildJumpGantries(track) {
 
 function buildLightTowers(track) {
   const group = new THREE.Group();
-  const pole = new THREE.CylinderGeometry(0.28, 0.5, 30, 8);
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0x2f2c2c, roughness: 0.7 });
-  const head = new THREE.BoxGeometry(5.5, 2.6, 0.5);
-  const bulb = new THREE.SphereGeometry(0.34, 8, 6);
-  const bulbMat = new THREE.MeshBasicMaterial({ color: 0xfff0c8 });
   // Eight poles round the outside, walked in from far out until the fence is close.
   const offsets = [];
   for (let k = 0; k < 8; k++) {
@@ -727,24 +816,39 @@ function buildLightTowers(track) {
     while (r > 20 && track.sdfAt(Math.cos(a) * r, Math.sin(a) * r) < -9) r -= 2;
     offsets.push([Math.cos(a) * r, Math.sin(a) * r]);
   }
+  const towers = instanced(lightTower(), painted(0.7), offsets.length, (dummy, tint, i) => {
+    dummy.position.set(offsets[i][0], 0, offsets[i][1]);
+    dummy.rotation.y = Math.atan2(-offsets[i][0], -offsets[i][1]);
+  });
+  towers.castShadow = true;
+  towers.name = 'lightTowers';
+  group.add(towers);
+
+  const lamps = [];
   for (const [x, z] of offsets) {
-    const p = new THREE.Mesh(pole, poleMat);
-    p.position.set(x, 15, z);
-    p.castShadow = true;
-    group.add(p);
-    const h = new THREE.Mesh(head, poleMat);
-    h.position.set(x, 30, z);
-    h.lookAt(0, 0, 0);
-    group.add(h);
+    const yaw = Math.atan2(-x, -z);
     for (let i = -2; i <= 2; i++) {
       for (let j = 0; j < 2; j++) {
-        const b = new THREE.Mesh(bulb, bulbMat);
-        b.position.set(i * 1.0, -0.5 + j, 0.32);
-        h.add(b);
+        const lx = i * 1.05, ly = 29.45 + j * 1.1;
+        lamps.push({ x: x + Math.cos(yaw) * lx + Math.sin(yaw) * 0.26, y: ly, z: z - Math.sin(yaw) * lx + Math.cos(yaw) * 0.26, yaw });
       }
     }
   }
+  group.add(instanced(floodlamp(), new THREE.MeshBasicMaterial({ color: 0xfff0c8 }), lamps.length, (dummy, tint, i) => {
+    const l = lamps[i];
+    dummy.position.set(l.x, l.y, l.z);
+    dummy.rotation.y = l.yaw;
+  }));
   return group;
+}
+
+function isInside(poly, x, z) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, zi] = poly[i], [xj, zj] = poly[j];
+    if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+  }
+  return inside;
 }
 
 function buildScenery(track, rng) {
@@ -752,34 +856,51 @@ function buildScenery(track, rng) {
 
   // Ferris wheel out past the stands, turned against the sunset.
   const wheel = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color: 0x2a2228, roughness: 0.7 });
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(26, 0.5, 8, 48), mat);
-  wheel.add(rim);
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2;
-    const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.3, 26, 0.3), mat);
-    spoke.position.set(Math.cos(a) * 13, Math.sin(a) * 13, 0);
-    spoke.rotation.z = a - Math.PI / 2;
-    wheel.add(spoke);
-    const car = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.4, 2.4), new THREE.MeshStandardMaterial({ color: i % 2 ? 0xc8321f : 0xe8b023 }));
-    car.position.set(Math.cos(a) * 26, Math.sin(a) * 26, 0);
-    wheel.add(car);
-  }
-  wheel.position.set(-210, 32, -120);
+  const hubHeight = 32;
+  const frame = solid(ferrisWheel(-hubHeight), painted(0.7), false);
+  frame.name = 'ferrisWheel';
+  wheel.add(frame);
+  wheel.add(new THREE.Mesh(wheelBulbs(), new THREE.MeshBasicMaterial({ color: 0xffe2a0, vertexColors: true })));
+  wheel.position.set(-210, hubHeight, -120);
   wheel.rotation.y = 0.6;
   group.add(wheel);
 
-  // Silhouette trees and a line of trucks in the back paddock.
-  const trunk = new THREE.ConeGeometry(5, 16, 7);
-  const tree = new THREE.MeshBasicMaterial({ color: 0x3a2228, fog: false });
-  for (let i = 0; i < 70; i++) {
-    const a = rng() * Math.PI * 2;
-    const r = 240 + rng() * 140;
-    const m = new THREE.Mesh(trunk, tree);
-    const s = 0.8 + rng() * 1.2;
-    m.scale.set(s, s, s);
-    m.position.set(Math.cos(a) * r, 7 * s, Math.sin(a) * r);
-    group.add(m);
+  // Woods round the fairground, outside the outer wall so nothing stands between a
+  // camera and the road: pines at the back, broadleaves turning for autumn in front.
+  const outer = track.polys.reduce((a, b) => (loopCentre(a).reach > loopCentre(b).reach ? a : b));
+  const fromWall = (x, z) => {
+    let nearest = Infinity;
+    for (let i = 0; i < outer.length; i += 6) nearest = Math.min(nearest, Math.hypot(outer[i][0] - x, outer[i][1] - z));
+    return nearest;
+  };
+  const stands = [];
+  for (let tries = 0; tries < 4000 && stands.length < 170; tries++) {
+    const a = rng() * Math.PI * 2, r = 170 + rng() * 230;
+    const x = Math.cos(a) * r, z = Math.sin(a) * r;
+    // The sim's distance field stops at the edge of its grid, so this measures for itself.
+    if (isInside(outer, x, z) || fromWall(x, z) < 34) continue;
+    if (Math.hypot(x + 210, z + 120) < 44) continue;
+    stands.push({ x, z, yaw: rng() * Math.PI * 2, size: 0.8 + rng() * 0.9, pine: r > 245 ? rng() < 0.8 : rng() < 0.35, shade: rng() });
   }
+  const leaves = [0x5d6b35, 0x7a7a35, 0xa87a2e, 0xb55a2a, 0x6e5a2f, 0x4f6438];
+  const needles = [0x3b5236, 0x2f4733, 0x46583a];
+  const woodland = painted(0.95);
+  const kinds = [
+    [true, pineTree(3)], [true, pineTree(19)], [false, broadleafTree(5)], [false, broadleafTree(23)],
+  ];
+  kinds.forEach(([pine, geometry], kind) => {
+    const some = stands.filter((t, i) => t.pine === pine && i % 2 === kind % 2);
+    if (some.length === 0) return;
+    const trees = instanced(geometry, woodland, some.length, (dummy, tint, i) => {
+      const t = some[i];
+      dummy.position.set(t.x, 0, t.z);
+      dummy.rotation.y = t.yaw;
+      dummy.scale.setScalar(t.size);
+      const list = pine ? needles : leaves;
+      tint.setHex(list[Math.floor(t.shade * list.length)]);
+    });
+    trees.name = 'trees';
+    group.add(trees);
+  });
   return group;
 }

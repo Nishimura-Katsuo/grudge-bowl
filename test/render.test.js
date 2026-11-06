@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { buildBumper, buildEyes, buildLamps, buildShell, buildTrim, crumple } from '../src/render/carModel.js';
+import { buildBumper, buildEyes, buildLamps, buildShell, buildTrim, buildWheelGeometry, crumple } from '../src/render/carModel.js';
+import * as props from '../src/render/props.js';
 import { CAR } from '../src/sim/config.js';
 import { createRng } from '../src/sim/math.js';
 
@@ -149,4 +150,47 @@ test('every part of a car dents with the body, so nothing is left floating', () 
     assertUnitNormals(part.geometry, 'after a hard life');
     for (const v of part.geometry.attributes.position.array) assert.ok(Number.isFinite(v));
   }
+});
+
+test('a wheel is solid from the side: its rims and tyre all face outward', () => {
+  const faces = triangles(buildWheelGeometry());
+  let rim = 0;
+  for (const t of faces) {
+    const middle = t.a.clone().add(t.b).add(t.c).divideScalar(3);
+    const radius = Math.hypot(middle.x, middle.y);
+    const facing = t.cross.clone().normalize();
+    if (radius < 0.2 && Math.abs(middle.z) > 0.05) {
+      rim++;
+      assert.ok(facing.z * Math.sign(middle.z) > 0, `a rim face at z ${middle.z} looks into the wheel`);
+    }
+    if (radius > 0.34) assert.ok(facing.x * middle.x + facing.y * middle.y > 0, 'the tread faces the axle');
+  }
+  assert.ok(rim > 40, `only ${rim} rim faces`);
+});
+
+test('every prop is sound geometry at a low poly count', () => {
+  const budget = {
+    'spectator body': [props.spectatorBody(false), 70], 'cheering spectator': [props.spectatorBody(true), 70],
+    'spectator head': [props.spectatorHead(), 45], hat: [props.spectatorHat(), 45],
+    pine: [props.pineTree(3), 110], broadleaf: [props.broadleafTree(5), 170], wreck: [props.crushedCar(31), 240],
+    tyre: [props.stackedTyre(), 110], 'fence post': [props.fencePost(4.6), 50], lamp: [props.floodlamp(), 50],
+    'water tower': [props.waterTower(0xe8b023), 2600], 'marshal tower': [props.marshalTower(), 2600],
+    'light tower': [props.lightTower(), 1500], 'ferris wheel': [props.ferrisWheel(-32), 6500],
+    bulbs: [props.wheelBulbs(), 900],
+  };
+  for (const [name, [geometry, limit]] of Object.entries(budget)) {
+    const count = geometry.attributes.position.count / 3;
+    assert.ok(count > 0 && count <= limit, `${name} has ${count} triangles against a limit of ${limit}`);
+    assertUnitNormals(geometry, name);
+    for (const v of geometry.attributes.position.array) assert.ok(Number.isFinite(v), `${name} has a bad vertex`);
+    assert.equal(geometry.attributes.color.count, geometry.attributes.position.count);
+  }
+});
+
+test('a pale prop stays pale, so instance tints give the colours they should', () => {
+  const body = props.spectatorBody(false).attributes.color.array;
+  assert.ok(body.some((v) => v > 0.99), 'nothing left white for a shirt tint');
+  const head = props.spectatorHead().attributes.color.array;
+  assert.ok(head.some((v) => v > 0.99), 'nothing left white for skin');
+  assert.ok(head.some((v) => v < 0.2), 'no darker hair');
 });
