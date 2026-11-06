@@ -66,6 +66,60 @@ function roughened(geometry, amount, seed) {
   return flat;
 }
 
+// One material that takes its colour from the shape, and an instance tint if it has one.
+export const painted = (roughness = 0.85) => new THREE.MeshStandardMaterial({ vertexColors: true, roughness });
+
+export function solid(geometry, material = painted(), shadow = true) {
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = shadow;
+  mesh.receiveShadow = shadow;
+  return mesh;
+}
+
+// The same shape, many times. `place` poses `dummy` and sets `tint` for each one.
+export function instanced(geometry, material, count, place) {
+  const mesh = new THREE.InstancedMesh(geometry, material, count);
+  const dummy = new THREE.Object3D();
+  const tint = new THREE.Color(1, 1, 1);
+  for (let i = 0; i < count; i++) {
+    place(dummy, tint, i);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(i, dummy.matrix);
+    mesh.setColorAt(i, tint);
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  mesh.computeBoundingSphere();
+  return mesh;
+}
+
+export function makeSign(text, width, height, bg, fg) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = Math.round((1024 * height) / width);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = fg;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  let size = canvas.height * 0.72;
+  ctx.font = `${size}px 'Bowlby One', Impact, sans-serif`;
+  while (ctx.measureText(text).width > canvas.width * 0.92) {
+    size -= 4;
+    ctx.font = `${size}px 'Bowlby One', Impact, sans-serif`;
+  }
+  ctx.fillText(text, canvas.width / 2, canvas.height * 0.54);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.Mesh(
+    new THREE.PlaneGeometry(width, height),
+    new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8, side: THREE.DoubleSide }),
+  );
+}
+
+// Middle of a wall loop, and how far around it the loop reaches.
+
 // ---- People ---------------------------------------------------------------
 
 // Sitting on a bench 0.45 up, facing +z, feet on the step. White shirt for the tint.
@@ -97,6 +151,41 @@ export function spectatorHat() {
     [cone(0.15, 0.16, 6), WHITE, { at: [0, 1.3, 0.01] }],
   ]);
 }
+
+const SHIRTS = [0xc8321f, 0xe8b023, 0x1f6b6b, 0xf3e2bd, 0x34404f, 0x8a5a33, 0x9aa8b6, 0xc77a36, 0x3f5e8c, 0xe9e4d8, 0x7a2d3a];
+const SKIN = [0xf0c9a4, 0xd9a77e, 0xb57f55, 0x8a5a3a, 0x5e3c28, 0xe8bd96];
+const HATS = [0xdcc48a, 0xc8321f, 0x2a2c35, 0x1f6b6b, 0xe9e4d8];
+
+// A crowd of one span, in three instanced meshes so a stand off camera costs nothing.
+export function buildCrowd(seats, rng, { shirts = SHIRTS, skin = SKIN, hats = HATS } = {}) {
+  const group = new THREE.Group();
+  const pick = (list) => list[Math.floor(rng() * list.length)];
+  const pose = (dummy, seat) => {
+    dummy.position.set(seat.x, seat.y, seat.z);
+    dummy.rotation.set(0, seat.yaw, 0);
+    dummy.scale.setScalar(seat.size);
+  };
+  const shared = { seated: painted(0.9), head: painted(0.8) };
+  for (const cheering of [false, true]) {
+    const some = seats.filter((seat) => seat.cheering === cheering);
+    if (some.length === 0) continue;
+    group.add(instanced(spectatorBody(cheering), shared.seated, some.length, (dummy, tint, i) => {
+      pose(dummy, some[i]);
+      tint.setHex(pick(shirts));
+    }));
+  }
+  group.add(instanced(spectatorHead(), shared.head, seats.length, (dummy, tint, i) => {
+    pose(dummy, seats[i]);
+    tint.setHex(pick(skin));
+  }));
+  const hatted = seats.filter((seat) => seat.hat);
+  group.add(instanced(spectatorHat(), shared.head, hatted.length, (dummy, tint, i) => {
+    pose(dummy, hatted[i]);
+    tint.setHex(pick(hats));
+  }));
+  return group;
+}
+
 
 // ---- Trees ----------------------------------------------------------------
 

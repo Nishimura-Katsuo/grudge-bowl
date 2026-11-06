@@ -130,11 +130,11 @@ export const ARSENAL = {
   spring: { radius: 2.8, life: 24, arm: 0.5, launch: 13 },
   hand: { speed: 82, life: 12, reach: 4.5, palm: 4, height: 6, windup: 0.18, follow: 0.26, rehit: 1, push: 4, drive: 12, lift: 1, damage: 0.025, finalPush: 6, finalDamage: 0.07 },
   piano: { fall: 1.7, radius: 5, push: 6, lift: -6, spin: 2, damage: 0.24 },
+  lava: { fall: 2.1, radius: 5.5, push: 7, lift: 5, spin: 2.5, damage: 0.09 },
   horn: { radius: 18, push: 15, lift: 3 },
 };
 
-// The Knot. Jumps and pinches hang off crossroads passes, numbered in route
-// order from the start of the lap, so they stay put if the layout changes.
+// What every course shares. The layouts themselves are in courses.js.
 export const TRACK = {
   halfWidth: 9,
   lineMargin: 2.6,
@@ -146,34 +146,7 @@ export const TRACK = {
   flatAroundCrossing: 40,
   rampCurveShare: 0.45,
   tarmacCurvature: 0.009,
-  jumps: [
-    // Out of the Scrapyard hairpin, where exit speeds differ most: the quick car
-    // flies further and comes down on the slow one.
-    { name: 'Hump', pass: 1, lipOffset: 272, ramp: 18, fall: 11, height: 1.75, airLength: 20, maxSpeed: 27 },
-    // Comes down on the third crossroads, into whoever is crossing it.
-    { name: 'Dropkick', pass: 2, lipOffset: -25, ramp: 18, fall: 11, height: 1.75, airLength: 28, maxSpeed: 31 },
-    // Comes down braking for the hairpin, so the next car lands on the last one.
-    { name: 'Pancake', pass: 5, lipOffset: 40, ramp: 18, fall: 11, height: 1.75, airLength: 46, maxSpeed: 42 },
-  ],
-  crates: [
-    { pass: 1, offset: 20 },
-    { pass: 1, offset: 130 },
-    { pass: 3, offset: 30 },
-    { pass: 3, offset: 165 },
-    { pass: 4, offset: -30 },
-    { pass: 5, offset: 190 },
-  ],
-  widthZones: [
-    { pass: 5, offset: 42, halfWidth: 6.4, span: 34 }, // funnels traffic into one lane over the Pancake
-    { pass: 5, offset: 118, halfWidth: 7.4, span: 42 }, // the Pancake hairpin
-    { pass: 1, offset: 212, halfWidth: 7.8, span: 34 }, // Scrapyard hairpin
-    { pass: 3, offset: 130, halfWidth: 7.6, span: 26 }, // the Neck, over the top
-  ],
-  mud: [
-    { pass: 1, offset: 236, side: -5, r: 8 },
-    { pass: 3, offset: 128, side: 4, r: 7 },
-    { pass: 5, offset: 150, side: 5, r: 8 },
-  ],
+  crestGrip: 0.6, // share of gravity a crest may take off the springs
 };
 
 // Painted finish line on the back straight, ahead of the grid, so the first lap is

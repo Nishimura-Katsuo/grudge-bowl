@@ -29,14 +29,15 @@ export function createWorld(options = {}) {
   const {
     seed = 1,
     carCount = CAR_COUNT,
-    laps = RULES.laps,
+    course = 'knot',
+    laps = getTrack(course).course.laps ?? RULES.laps,
     timeLimit = RULES.timeLimit,
     brainFactory = null,
     spawnOverride = null,
     lineup = ROSTER,
   } = options;
 
-  const track = getTrack();
+  const track = getTrack(course);
   const rng = createRng(seed);
   const order = shuffled(carCount, rng);
   const cars = [];
@@ -171,7 +172,7 @@ function creditHit(world, attacker, victim, damage, strength) {
 export function weaponHit(world, attacker, victim, amount, x, z, strength) {
   if (world.phase !== 'racing' || !victim.alive) return;
   const dealt = Math.min(amount, victim.health);
-  if (attacker !== victim) creditHit(world, attacker, victim, dealt, strength);
+  if (attacker && attacker !== victim) creditHit(world, attacker, victim, dealt, strength);
   victim.hitAny = Math.max(victim.hitAny, strength);
   applyDamage(world, victim, amount, 'right', x, z);
 }

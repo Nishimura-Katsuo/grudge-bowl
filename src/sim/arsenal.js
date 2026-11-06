@@ -442,9 +442,35 @@ function stepHazard(world, h, dt) {
   return true;
 }
 
+// The mountain joins in: a bomb comes down on the road just ahead of somebody at random.
+function stepEruption(world, dt) {
+  const a = world.arsenal;
+  const hazard = world.track.course.hazard;
+  a.eruption = (a.eruption ?? hazard.every) - dt;
+  if (a.eruption > 0) return;
+  a.eruption += hazard.every * (0.6 + 0.8 * world.rng());
+  const cars = running(world);
+  if (!cars.length) return;
+  const target = cars[Math.floor(world.rng() * cars.length)];
+  const lands = target.trackS + Math.hypot(target.vx, target.vz) * A.lava.fall * 0.9;
+  if (world.track.coveredAt(world.track.route(0, lands))) return; // the tube keeps it off
+  const here = world.track.sample(lands, PT);
+  const side = (world.rng() - 0.5) * 2 * hazard.spread;
+  const x = here.x - here.tz * side, z = here.z + here.tx * side;
+  a.drops.push({
+    id: a.nextId++, kind: 'lava', owner: -1, target: target.id, x, z,
+    y: world.track.heightAt(x, z), t: A.lava.fall, fall: A.lava.fall,
+  });
+}
+
 function stepDrop(world, drop, dt) {
   drop.t -= dt;
   if (drop.t > 0) return true;
+  if (drop.kind === 'lava') {
+    blast(world, drop.x, drop.y + 0.5, drop.z, A.lava, -1, 0);
+    emit(world, { type: 'lavaLands', x: drop.x, y: drop.y, z: drop.z });
+    return false;
+  }
   blast(world, drop.x, drop.y + 0.5, drop.z, A.piano, drop.owner, drop.weapon);
   emit(world, { type: 'pianoLands', owner: drop.owner, target: drop.target, x: drop.x, y: drop.y, z: drop.z });
   return false;
@@ -472,6 +498,7 @@ function keep(list, step, world, dt) {
 export function stepArsenal(world, dt) {
   const a = world.arsenal;
   const racing = world.phase === 'racing';
+  if (racing && world.track.course.hazard) stepEruption(world, dt);
   for (const crate of a.crates) if (crate.respawn > 0) crate.respawn -= dt;
 
   for (const car of world.cars) {

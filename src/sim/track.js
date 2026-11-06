@@ -1,28 +1,20 @@
-// The Knot: one closed road tied through itself. Three at-grade crossroads sit
-// in the middle, each passed twice a lap, and three jumps throw cars at them and
-// at each other.
-//
-// Everything downstream (walls, crossings, racing line, pace notes) is derived
-// from the control points, so the layout lives in one table.
+// A course is one closed road tied through itself. Everything downstream (walls,
+// crossings, racing line, pace notes) is derived from its control points, so each
+// layout lives in one table in courses.js.
 //
 // World axes: X and Z span the ground, Y is up. A heading (fx, fz) has its
 // right-hand side at (-fz, fx).
 
 import { clamp, smoothstep } from './math.js';
-import { SURFACE, SURFACE_PROPS, TRACK } from './config.js';
-
-const CONTROL = [
-  [-104, -22], [-72, -22], [-25, -22], [25, -22], [72, -22], [96, -11], [104, 16], [104, 50],
-  [99, 86], [86, 110], [63, 114], [45, 99], [25, 65], [0, 22], [-25, -22], [-44, -55],
-  [-58, -88], [-41, -114], [-4, -122], [33, -108], [52, -78], [42, -52], [25, -22], [0, 22],
-  [-25, 65], [-46, 102], [-68, 118], [-92, 106], [-106, 76], [-122, 38], [-134, 4], [-126, -15],
-];
+import { GRAVITY, GRID_LINE_S, SURFACE, SURFACE_PROPS, TRACK } from './config.js';
+import { COURSES } from './courses.js';
 
 const SAMPLE_STEP = 1;
 const CELL = 1;
 const HEIGHT_RES = 0.5;
 const MARGIN = 34;
 const STAMP_REACH = 16; // metres of sdf kept outside the road
+const FINISH_BEHIND_GRID = 122; // the line is behind the grid, so the first lap is short
 
 function catmullRom(points) {
   const n = points.length;
@@ -73,8 +65,8 @@ function differentiate(px, pz, step) {
   return { tx, tz, curv };
 }
 
-function buildCentreline() {
-  const raw = catmullRom(CONTROL);
+function buildCentreline(control) {
+  const raw = catmullRom(control);
   const cum = new Float64Array(raw.length + 1);
   for (let i = 1; i <= raw.length; i++) {
     const a = raw[i - 1], b = raw[i % raw.length];
@@ -96,7 +88,9 @@ function buildCentreline() {
   let length = 0;
   for (let i = 0; i < n; i++) length += Math.hypot(px[(i + 1) % n] - px[i], pz[(i + 1) % n] - pz[i]);
   const step = length / n;
-  return { n, step, length, px, pz, ...differentiate(px, pz, step) };
+  // Where each control point fell, so a feature can be placed by the corner it belongs to.
+  const anchors = control.map((_, i) => (cum[i * 60] / rawLength) * length);
+  return { n, step, length, anchors, px, pz, ...differentiate(px, pz, step) };
 }
 
 // Every place the road crosses itself, found from the geometry.
@@ -129,14 +123,52 @@ function findCrossings(c) {
 
 const routeTo = (from, to, length) => ((to - from) % length + length) % length;
 
-function halfWidthProfile(c, zones) {
+// Hills. The road takes the ground's height, eased so a crest doesn't throw cars and
+// so both strands of a crossroads meet at one level.
+function elevationProfile(c, passes, course, jumps) {
+  const { n, step, px, pz, length, anchors } = c;
+  const raw = new Float64Array(n);
+  for (let i = 0; i < n; i++) raw[i] = course.ground(px[i], pz[i]);
+  if (course.climb) {
+    anchors.forEach((from, k) => {
+      const next = (k + 1) % anchors.length;
+      const span = routeTo(from, anchors[next], length);
+      for (let d = 0; d < span; d += step) {
+        const i = Math.round((from + d) / step) % n;
+        raw[i] = course.climb[k] + (course.climb[next] - course.climb[k]) * (d / span);
+      }
+    });
+  }
+  const eased = smoothLoop(raw, 500);
+  const meet = TRACK.flatAroundCrossing;
+  for (const p of passes) {
+    const shared = (eased[Math.round(p.s / step) % n] + eased[Math.round(p.other / step) % n]) / 2;
+    for (let i = 0; i < n; i++) {
+      const d = Math.min(routeTo(p.s, i * step, length), routeTo(i * step, p.s, length));
+      if (d < meet) eased[i] += (shared - eased[i]) * (1 - smoothstep(meet * 0.4, meet, d));
+    }
+  }
+  // A kicker needs a steady run-up and a landing, so the road is level from ramp to touchdown.
+  for (const j of jumps) {
+    const reach = routeTo(j.startS, j.landS, length);
+    const flat = eased[Math.round(j.lipS / step) % n];
+    for (let i = 0; i < n; i++) {
+      const s = i * step;
+      const d = routeTo(j.startS, s, length) <= reach ? 0 : Math.min(routeTo(s, j.startS, length), routeTo(j.landS, s, length));
+      if (d < 30) eased[i] += (flat - eased[i]) * (1 - smoothstep(0, 30, d));
+    }
+  }
+  return smoothLoop(eased, 60);
+}
+
+function halfWidthProfile(c, zones, base) {
   const hw = new Float64Array(c.n);
   for (let i = 0; i < c.n; i++) {
-    let w = TRACK.halfWidth;
+    let w = base;
     const s = i * c.step;
     for (const z of zones) {
       const d = Math.min(routeTo(z.s, s, c.length), routeTo(s, z.s, c.length));
-      w += (z.halfWidth - TRACK.halfWidth) * (1 - smoothstep(z.span * 0.6, z.span, d));
+      w += (z.halfWidth - base) * (1 - smoothstep(z.span * 0.6, z.span, d));
     }
     hw[i] = w;
   }
@@ -192,7 +224,7 @@ function racingLine(c, hw) {
 
 // The speed that gets a car round everything ahead of it, held below the grip
 // limit by a backward pass. Nothing brakes in the air.
-function paceNotes(c, line, surfaceGrip, jumps) {
+function paceNotes(c, line, surfaceGrip, jumps, gravity, elevation) {
   const { n, step } = c;
   const pace = new Float64Array(n);
   const noBrake = new Uint8Array(n);
@@ -202,7 +234,15 @@ function paceNotes(c, line, surfaceGrip, jumps) {
   }
   for (let i = 0; i < n; i++) {
     const mu = TRACK.paceGrip * surfaceGrip[i];
-    pace[i] = Math.min(TRACK.topSpeed, Math.sqrt((mu * 9.81) / Math.max(1e-4, Math.abs(line.curv[i]))));
+    pace[i] = Math.min(TRACK.topSpeed, Math.sqrt((mu * gravity) / Math.max(1e-4, Math.abs(line.curv[i]))));
+  }
+  // Over a crest the road falls away, and a car that leaves it can't steer or brake.
+  if (elevation) {
+    const reach = Math.round(8 / step);
+    for (let i = 0; i < n; i++) {
+      const dip = (2 * elevation[i] - elevation[(i + reach) % n] - elevation[(i + n - reach) % n]) / (reach * step) ** 2;
+      if (dip > 0) pace[i] = Math.min(pace[i], Math.sqrt((TRACK.crestGrip * gravity) / dip));
+    }
   }
   // The speed a jump is built for holds from the lip until the wheels are back down.
   for (const j of jumps) {
@@ -213,9 +253,9 @@ function paceNotes(c, line, surfaceGrip, jumps) {
     const i = k % n, prev = (k - 1) % n;
     if (noBrake[prev]) { pace[prev] = Math.min(pace[prev], pace[i]); continue; }
     const mu = TRACK.paceGrip * surfaceGrip[prev];
-    const cornering = (pace[i] * pace[i] * Math.abs(line.curv[prev])) / (mu * 9.81);
+    const cornering = (pace[i] * pace[i] * Math.abs(line.curv[prev])) / (mu * gravity);
     const left = Math.sqrt(Math.max(0.05, 1 - cornering * cornering));
-    pace[prev] = Math.min(pace[prev], Math.sqrt(pace[i] * pace[i] + 2 * TRACK.paceBrake * mu * 9.81 * left * step));
+    pace[prev] = Math.min(pace[prev], Math.sqrt(pace[i] * pace[i] + 2 * TRACK.paceBrake * mu * gravity * left * step));
   }
   return smoothLoop(pace, 3);
 }
@@ -276,24 +316,33 @@ function traceWalls(sdf, nx, nz, minX, minZ, cell) {
   return polys;
 }
 
-function buildTrack() {
-  const centre = buildCentreline();
+function buildTrack(course) {
+  const gravity = course.gravity ?? GRAVITY;
+  const centre = buildCentreline(course.control);
   const { n, px, pz, tx, tz, curv, step, length } = centre;
   const crossings = findCrossings(centre);
   const passes = crossings
     .flatMap((x) => [{ s: x.sA, other: x.sB, crossing: x.id }, { s: x.sB, other: x.sA, crossing: x.id }])
     .sort((a, b) => a.s - b.s);
 
-  // Features are placed relative to the crossroads, so they move with the layout.
-  const jumps = TRACK.jumps.map((j, id) => {
-    const lipS = passes[j.pass].s + j.lipOffset;
+  // Features are placed relative to a crossroads or a corner, so they move with the layout.
+  const place = (f) => (f.corner === undefined
+    ? passes[f.pass].s + f.offset
+    : routeTo(0, centre.anchors[f.corner] + f.offset, length));
+  const jumps = course.jumps.map((j, id) => {
+    const lipS = place(j);
     return {
       id, name: j.name, height: j.height, airLength: j.airLength, maxSpeed: j.maxSpeed,
       startS: lipS - j.ramp, lipS, endS: lipS + j.fall, landS: lipS + j.airLength,
     };
   });
-  const widthZones = TRACK.widthZones.map((z) => ({ ...z, s: passes[z.pass].s + z.offset }));
-  const hw = halfWidthProfile(centre, widthZones);
+  const widthZones = course.widthZones.map((z) => ({ ...z, s: place(z) }));
+  const hw = halfWidthProfile(centre, widthZones, course.halfWidth ?? TRACK.halfWidth);
+  const covers = (course.covers ?? []).map((v) => {
+    const from = place(v.from);
+    return { ...v, from, length: routeTo(from, place(v.to), length) };
+  });
+  const elevation = course.ground ? elevationProfile(centre, passes, course, jumps) : null;
 
   const minX = Math.floor(Math.min(...px)) - MARGIN, maxX = Math.ceil(Math.max(...px)) + MARGIN;
   const minZ = Math.floor(Math.min(...pz)) - MARGIN, maxZ = Math.ceil(Math.max(...pz)) + MARGIN;
@@ -354,13 +403,20 @@ function buildTrack() {
     tarmac[i] = nearCrossing || Math.abs(curv[i]) < TRACK.tarmacCurvature ? 1 : 0;
   }
   const tarmacSmooth = smoothLoop(tarmac, 40);
-  const surfaceId = Uint8Array.from(tarmacSmooth, (v) => (v > 0.5 ? SURFACE.ASPHALT : SURFACE.CLAY));
+  const fast = SURFACE[course.straights ?? 'ASPHALT'], slow = SURFACE[course.corners ?? 'CLAY'];
+  const surfaceId = Uint8Array.from(tarmacSmooth, (v) => (v > 0.5 ? fast : slow));
 
-  const mud = TRACK.mud.map((m) => {
-    const i = Math.round((passes[m.pass].s + m.offset) / step) % n;
+  const mud = course.mud.map((m) => {
+    const i = Math.round(place(m) / step) % n;
     return { x: px[i] - tz[i] * m.side, z: pz[i] + tx[i] * m.side, r: m.r };
   });
 
+  // Hills come down to nothing at the map's edge, to meet the apron.
+  const groundAt = (x, z) => {
+    if (!course.ground) return 0;
+    const edge = Math.min(x - minX, maxX - x, z - minZ, maxZ - z);
+    return course.ground(x, z) * smoothstep(0, 18, edge);
+  };
   const heights = new Float32Array(hNx * hNz);
   for (let iz = 0; iz < hNz; iz++) {
     const z = minZ + iz * HEIGHT_RES;
@@ -371,7 +427,7 @@ function buildTrack() {
       const ruts =
         0.04 * Math.sin(x * 0.31 + 1.7 * Math.sin(z * 0.13)) * Math.sin(z * 0.37 + 0.6) +
         0.022 * Math.sin(x * 0.83 - z * 0.71);
-      if (i < 0) { heights[k] = ruts; continue; }
+      if (i < 0) { heights[k] = groundAt(x, z) + ruts; continue; }
       const right = (x - px[i]) * -tz[i] + (z - pz[i]) * tx[i];
       const outside = Math.max(0, Math.abs(right) - hw[i]);
       const shoulder = 1 - smoothstep(0, STAMP_REACH - 2, outside);
@@ -379,6 +435,10 @@ function buildTrack() {
       const across = clamp(right * -Math.sign(b), -hw[i], hw[i]);
       let h = Math.abs(b) * (hw[i] + across) * shoulder;
       for (const j of jumps) h += hump(j, i * step, length) * shoulder;
+      if (elevation) {
+        const land = groundAt(x, z);
+        h += land + (elevation[i] - land) * shoulder;
+      }
       heights[k] = h + ruts;
     }
   }
@@ -394,15 +454,15 @@ function buildTrack() {
     for (let ix = 0; ix < gridNx; ix++) {
       const x = minX + ix * CELL;
       const i = nearest[iz * 2 * hNx + ix * 2];
-      let id = i >= 0 ? surfaceId[i] : SURFACE.CLAY;
+      let id = i >= 0 ? surfaceId[i] : slow;
       for (const m of mud) if (Math.hypot(x - m.x, z - m.z) < m.r) id = SURFACE.MUD;
       surface[iz * gridNx + ix] = id;
     }
   }
 
   // Three prize crates across the road at each spot.
-  const crateSpots = TRACK.crates.map((c) => {
-    const s = routeTo(0, passes[c.pass].s + c.offset, length);
+  const crateSpots = course.crates.map((c) => {
+    const s = routeTo(0, place(c), length);
     const i = Math.round(s / step) % n;
     const crates = [-0.6, 0, 0.6].map((share) => ({
       x: px[i] - tz[i] * hw[i] * share,
@@ -419,17 +479,25 @@ function buildTrack() {
     const iz = clamp(Math.round((line.pz[i] - minZ) / CELL), 0, gridNz - 1);
     surfaceGrip[i] = SURFACE_PROPS[surface[iz * gridNx + ix]].grip;
   }
-  const pace = paceNotes(centre, line, surfaceGrip, jumps);
+  const pace = paceNotes(centre, line, surfaceGrip, jumps, gravity, elevation);
   const polys = traceWalls(sdf, gridNx, gridNz, minX, minZ, CELL);
 
   return new Track({
-    centre, polys, sdf, heights, surface, crossings, passes, jumps, mud, line, pace, hw, crateSpots,
+    centre, polys, sdf, heights, surface, crossings, passes, jumps, mud, line, pace, hw, crateSpots, covers, course, gravity,
+    finishS: course.finishS ?? length - FINISH_BEHIND_GRID,
+    gridS: GRID_LINE_S,
     grid: { minX, minZ, maxX, maxZ, gridNx, gridNz, hNx, hNz },
   });
 }
 
 export class Track {
-  constructor({ centre, polys, sdf, heights, surface, crossings, passes, jumps, mud, line, pace, hw, crateSpots, grid }) {
+  constructor({ centre, polys, sdf, heights, surface, crossings, passes, jumps, mud, line, pace, hw, crateSpots, covers, course, gravity, finishS, gridS, grid }) {
+    this.course = course;
+    this.gravity = gravity;
+    this.airGravity = course.airGravity ?? gravity;
+    this.finishS = finishS;
+    this.gridS = gridS;
+    this.covers = covers;
     this.centre = centre;
     this.length = centre.length;
     this.polys = polys;
@@ -590,6 +658,12 @@ export class Track {
     return { pass: best, distance: bestD };
   }
 
+  // Under a roof: a tunnel, a tent, a ship's hull. Cameras outside can't see in.
+  coveredAt(s) {
+    for (const v of this.covers) if (!v.clear && routeTo(v.from, s, this.length) <= v.length) return true;
+    return false;
+  }
+
   toNextLip(s) {
     let best = Infinity;
     for (const j of this.jumps) best = Math.min(best, routeTo(s, j.lipS, this.length));
@@ -599,8 +673,22 @@ export class Track {
   route(from, to) { return routeTo(from, to, this.length); }
 }
 
-let cached = null;
-export function getTrack() {
-  if (!cached) cached = buildTrack();
-  return cached;
+const built = new Map();
+export function getTrack(id = 'knot') {
+  if (!built.has(id)) built.set(id, buildTrack(COURSES[id]));
+  return built.get(id);
+}
+
+// A track as plain data, for the worker to send over. A course's functions can't cross
+// a thread, so it goes by name.
+export function packTrack(track) {
+  const { course, ...data } = track;
+  return { ...data, courseId: course.id };
+}
+
+// Takes a track built elsewhere, unless the race got there first and built its own.
+export function adoptTrack(packed) {
+  const { courseId, ...data } = packed;
+  if (!built.has(courseId)) built.set(courseId, Object.assign(Object.create(Track.prototype), data, { course: COURSES[courseId] }));
+  return built.get(courseId);
 }

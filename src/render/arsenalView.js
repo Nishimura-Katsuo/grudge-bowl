@@ -227,6 +227,26 @@ function buildSpring() {
   return g;
 }
 
+// Crate models outlive a race, and the next race may be on another course, so each one
+// takes its place from the sim every frame.
+export function poseCrate(mesh, crate, time) {
+  mesh.visible = crate.respawn <= 0;
+  mesh.position.set(crate.x, crate.y + Math.sin(time * 2.2 + crate.id) * 0.18, crate.z);
+  mesh.rotation.set(0.35, time * 1.3 + crate.id, 0);
+}
+
+// A lump of the mountain, still molten inside.
+function buildLavaBomb() {
+  const bomb = new THREE.Group();
+  const rock = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(1.5, 1),
+    new THREE.MeshStandardMaterial({ color: 0x1c1412, emissive: 0xff4a10, emissiveIntensity: 1.4, flatShading: true, roughness: 0.9 }),
+  );
+  const heart = new THREE.Mesh(new THREE.IcosahedronGeometry(1.15, 0), new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 1.3, 0.2) }));
+  bomb.add(rock, heart);
+  return bomb;
+}
+
 function buildPiano() {
   const g = new THREE.Group();
   const case_ = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.7, 1.7), LACQUER);
@@ -334,11 +354,11 @@ export class ArsenalView {
     else if (type === 'mine') mesh = new THREE.Mesh(this.matGeo, this.matMat);
     else if (type === 'spring') mesh = buildSpring();
     else if (type === 'oil') mesh = this.oilMesh(item);
-    else if (type === 'piano') {
+    else if (type === 'piano' || type === 'lava') {
       mesh = new THREE.Group();
       const shadow = new THREE.Mesh(new THREE.CircleGeometry(1, 24).rotateX(-Math.PI / 2), this.shadowMat.clone());
       shadow.position.set(0, 0.1, 0);
-      const piano = buildPiano();
+      const piano = type === 'lava' ? buildLavaBomb() : buildPiano();
       mesh.add(shadow, piano);
       mesh.userData = { shadow, piano };
     } else if (type === 'tether') {
@@ -389,15 +409,10 @@ export class ArsenalView {
       if (!mesh) {
         mesh = new THREE.Mesh(this.crateGeo, this.crateMat);
         mesh.castShadow = true;
-        mesh.position.set(crate.x, crate.y, crate.z);
         this.root.add(mesh);
         this.crates.set(crate.id, mesh);
       }
-      mesh.visible = crate.respawn <= 0;
-      if (!mesh.visible) continue;
-      mesh.rotation.y = time * 1.3 + crate.id;
-      mesh.rotation.x = 0.35;
-      mesh.position.y = crate.y + Math.sin(time * 2.2 + crate.id) * 0.18;
+      poseCrate(mesh, crate, time);
     }
 
     for (const s of a.shots) {
@@ -434,10 +449,10 @@ export class ArsenalView {
     }
 
     for (const d of a.drops) {
-      const mesh = this.thing(d, 'piano');
+      const mesh = this.thing(d, d.kind === 'lava' ? 'lava' : 'piano');
       mesh.position.set(d.x, d.y, d.z);
       const k = d.t / d.fall;
-      mesh.userData.piano.position.y = k * k * ARSENAL.piano.fall * ARSENAL.piano.fall * 0.5 * 28;
+      mesh.userData.piano.position.y = k * k * d.fall * d.fall * 0.5 * 28;
       mesh.userData.piano.rotation.set(k * 2, k * 3, k * 1.4);
       mesh.userData.shadow.scale.setScalar(1.4 + (1 - k) * 2.6);
       mesh.userData.shadow.material.opacity = 0.25 + (1 - k) * 0.5;

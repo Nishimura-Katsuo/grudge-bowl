@@ -10,6 +10,7 @@ const SVG = 'http://www.w3.org/2000/svg';
 const hex = (n) => `#${n.toString(16).padStart(6, '0')}`;
 
 const NAME_FITS = 13; // characters that fit a board row at full size
+const COURSE_CARD_MS = 3600; // the countdown and a beat
 
 // Rage sits near .6 through a race, so these give each face about a third of the time.
 export const moodOf = (rage) => (rage < 0.4 ? 'calm' : rage < 0.75 ? 'irritated' : 'pissed');
@@ -302,8 +303,19 @@ export class Hud {
     document.body.classList.add('scene');
   }
 
-  setNextRace(seconds) {
-    this.el('next-race').textContent = `Next race in ${seconds}`;
+  // Named over the countdown, so you know where you've been sent.
+  showCourse(course) {
+    this.el('course-name').textContent = course.name;
+    this.el('course-place').textContent = course.place;
+    this.el('course-blurb').textContent = course.blurb;
+    const card = this.el('course-card');
+    card.classList.add('show');
+    clearTimeout(this.courseTimer);
+    this.courseTimer = setTimeout(() => card.classList.remove('show'), COURSE_CARD_MS);
+  }
+
+  setNextRace(seconds, course) {
+    this.el('next-race').textContent = `Next: ${course}, in ${seconds}`;
   }
 
   raceClock(seconds) {

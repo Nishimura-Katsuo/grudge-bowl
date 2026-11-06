@@ -414,6 +414,11 @@ export class Effects {
     this.emitAccum = new Map();
   }
 
+  setTrack(track) {
+    this.track = track;
+    this.skids.track = track;
+  }
+
   // A new race starts on a clean track.
   reset() {
     for (const part of [this.soft, this.glow, this.sparks, this.debris, this.skids, this.flash]) part.reset();

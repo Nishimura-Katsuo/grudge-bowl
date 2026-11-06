@@ -1,15 +1,16 @@
-// The Knot at last light: terrain painted from the sim's surface map, barriers
-// built from the sim's wall polylines, and the county-fair clutter around them.
+// The ground under a race: terrain painted from the sim's surface map, barriers built
+// from the sim's wall polylines, then whatever the course's world puts around them.
+// The Knot's county fair lives here. The other worlds are in worlds.js.
 
 import * as THREE from 'three';
-import { FINISH_LINE_S, GRID_LINE_S, SURFACE } from '../sim/config.js';
 import { createRng } from '../sim/math.js';
 import {
-  assemble, broadleafTree, crushedCar, fencePost, ferrisWheel, floodlamp, lightTower, marshalTower, pineTree,
-  spectatorBody, spectatorHat, spectatorHead, stackedTyre, strut, waterTower, wheelBulbs,
+  assemble, broadleafTree, buildCrowd, crushedCar, fencePost, ferrisWheel, floodlamp, instanced, lightTower, makeSign,
+  marshalTower, painted, pineTree, solid, stackedTyre, strut, waterTower, wheelBulbs,
 } from './props.js';
+import { WORLDS } from './worlds.js';
+import { GROUNDS, glowSize, groundSize, paintGlow, paintGround } from './groundPaint.js';
 
-const SUN_DIR = new THREE.Vector3(-0.62, 0.3, 0.72).normalize();
 const FENCE_FOOT = 1.1; // top of the barrier
 const FENCE_TOP = 4.6;
 const FENCE_MESH = 0.9; // metres per diamond
@@ -23,54 +24,113 @@ const STAND_SPANS = [
   [[5, 170], [5, 300]],
 ];
 
+// Every sponsor anywhere in the game is invented.
+const KNOT_LOOK = {
+  exposure: 0.95,
+  fog: [0xd9925a, 0.0015],
+  sunDir: [-0.62, 0.3, 0.72],
+  sun: [0xffb36b, 2.9],
+  hemi: [0xffd9b0, 0x8a5a3a, 1.9],
+  sky: {
+    horizon: [1, 0.56, 0.27], mid: [0.86, 0.32, 0.3], zenith: [0.17, 0.2, 0.42],
+    glow: [1, 0.72, 0.42], disc: [1, 0.9, 0.7], bands: 1, stars: 0,
+  },
+  hills: [{ r: 560, h: 46, color: 0x6e3a3a }, { r: 430, h: 28, color: 0x4d2a2c }],
+  apron: 0x6c5a33,
+  panels: [
+    ['#c8321f', '#f3e2bd', "BIG DON'S TOWING"],
+    ['#e8b023', '#1a1b20', 'HOT LARD DONUTS'],
+    ['#1f6b6b', '#f3e2bd', 'TRI-COUNTY SCRAP'],
+    ['#f3e2bd', '#c8321f', 'NO REFUNDS'],
+    ['#2a2c35', '#e8b023', 'LOU\'S RADIATORS'],
+    ['#c8321f', '#f3e2bd', 'DENTS WHILE U WAIT'],
+    ['#1f6b6b', '#e8b023', 'FAIRVIEW CHIROPRACTIC'],
+    ['#e8b023', '#c8321f', 'GRUDGE BOWL'],
+  ],
+  build(root, track, rng) {
+    const spans = STAND_SPANS.map(([from, to]) => ({ from: track.passes[from[0]].s + from[1], to: track.passes[to[0]].s + to[1] }));
+    root.add(buildGrandstands(track, rng, spans));
+    root.add(buildInfield(track, rng));
+    root.add(buildLightTowers(track));
+    root.add(buildScenery(track, rng));
+  },
+};
+
 export function buildStage(scene, track) {
   const rng = createRng(0xb0a1);
+  const look = WORLDS[track.course.id] ?? KNOT_LOOK;
+  const root = new THREE.Group();
+  const sunDir = new THREE.Vector3(...look.sunDir).normalize();
+  scene.add(root);
 
   scene.background = null;
-  scene.fog = new THREE.FogExp2(0xd9925a, 0.0015);
-  scene.add(buildSky());
-  scene.add(buildDistantHills(rng));
-  scene.add(buildTerrain(track));
-  scene.add(buildBarriers(track));
-  scene.add(buildCatchFence(track));
-  scene.add(buildFencePosts(track));
-  scene.add(buildGrandstands(track, rng));
-  scene.add(buildInfield(track, rng));
-  scene.add(buildJumpGantries(track));
-  const towers = buildLightTowers(track);
-  scene.add(towers);
-  scene.add(buildScenery(track, rng));
+  scene.fog = new THREE.FogExp2(...look.fog);
+  root.add(buildSky(look.sky, sunDir));
+  root.add(buildDistantHills(rng, look.hills));
+  root.add(buildTerrain(track, look));
+  root.add(buildBarriers(track, look.panels));
+  root.add(buildCatchFence(track));
+  root.add(buildFencePosts(track));
+  root.add(buildJumpGantries(track));
+  const animate = look.build(root, track, rng) ?? null;
 
-  const hemi = new THREE.HemisphereLight(0xffd9b0, 0x8a5a3a, 1.9);
-  scene.add(hemi);
+  const hemi = new THREE.HemisphereLight(...look.hemi);
+  root.add(hemi);
 
-  const sun = new THREE.DirectionalLight(0xffb36b, 2.9);
+  const sun = new THREE.DirectionalLight(...look.sun);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   const s = sun.shadow.camera;
   s.left = -62; s.right = 62; s.top = 62; s.bottom = -62; s.near = 10; s.far = 460;
   sun.shadow.bias = -0.0006;
   sun.shadow.normalBias = 0.4;
-  scene.add(sun);
-  scene.add(sun.target);
+  root.add(sun);
+  root.add(sun.target);
 
   return {
     sun,
-    update(focus) {
+    exposure: look.exposure,
+    update(focus, time, dt) {
       sun.target.position.copy(focus);
-      sun.position.copy(focus).addScaledVector(SUN_DIR, 220);
+      sun.position.copy(focus).addScaledVector(sunDir, 220);
       sun.target.updateMatrixWorld();
+      animate?.(time, dt);
+    },
+    // A stage is rebuilt for every course, so nothing of the last one may stay on the GPU.
+    dispose() {
+      scene.remove(root);
+      const owned = new Set();
+      root.traverse((o) => {
+        if (o.geometry) owned.add(o.geometry);
+        for (const m of [o.material].flat()) {
+          if (!m) continue;
+          owned.add(m);
+          for (const value of Object.values(m)) if (value?.isTexture) owned.add(value);
+        }
+        if (o.isInstancedMesh) owned.add(o);
+      });
+      sun.shadow.map?.dispose();
+      for (const item of owned) item.dispose();
     },
   };
 }
 
-function buildSky() {
+function buildSky(sky, sunDir) {
   const geo = new THREE.SphereGeometry(900, 32, 16);
   const mat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
     depthWrite: false,
     fog: false,
-    uniforms: { sunDir: { value: SUN_DIR } },
+    uniforms: {
+      sunDir: { value: sunDir },
+      horizon: { value: new THREE.Vector3(...sky.horizon) },
+      mid: { value: new THREE.Vector3(...sky.mid) },
+      zenith: { value: new THREE.Vector3(...sky.zenith) },
+      glow: { value: new THREE.Vector3(...sky.glow) },
+      disc: { value: new THREE.Vector3(...sky.disc) },
+      bandShare: { value: sky.bands },
+      stars: { value: sky.stars },
+    },
     vertexShader: `
       varying vec3 vDir;
       void main() {
@@ -78,20 +138,24 @@ function buildSky() {
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }`,
     fragmentShader: `
-      uniform vec3 sunDir;
+      uniform vec3 sunDir, horizon, mid, zenith, glow, disc;
+      uniform float bandShare, stars;
       varying vec3 vDir;
+      float hash(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
       void main() {
         float h = clamp(vDir.y, 0.0, 1.0);
-        vec3 horizon = vec3(1.0, 0.56, 0.27);
-        vec3 mid = vec3(0.86, 0.32, 0.30);
-        vec3 zenith = vec3(0.17, 0.2, 0.42);
         vec3 c = mix(horizon, mid, smoothstep(0.0, 0.22, h));
         c = mix(c, zenith, smoothstep(0.16, 0.7, h));
         float d = max(dot(normalize(vDir), sunDir), 0.0);
-        c += vec3(1.0, 0.72, 0.42) * pow(d, 12.0) * 0.55;
-        c += vec3(1.0, 0.9, 0.7) * smoothstep(0.9994, 0.9998, d) * 3.0;
+        c += glow * pow(d, 12.0) * 0.55;
+        c += disc * smoothstep(0.9994, 0.9998, d) * 3.0;
         float bands = sin(vDir.y * 34.0 + vDir.x * 5.0) * 0.5 + 0.5;
-        c += vec3(0.5, 0.2, 0.12) * smoothstep(0.55, 0.95, bands) * smoothstep(0.02, 0.1, h) * (1.0 - smoothstep(0.1, 0.3, h)) * 0.25;
+        c += vec3(0.5, 0.2, 0.12) * smoothstep(0.55, 0.95, bands) * smoothstep(0.02, 0.1, h) * (1.0 - smoothstep(0.1, 0.3, h)) * 0.25 * bandShare;
+        if (stars > 0.0) {
+          vec3 cell = floor(normalize(vDir) * 150.0);
+          float twinkle = step(0.9975, hash(cell));
+          c += vec3(0.85, 0.9, 1.0) * twinkle * stars * smoothstep(0.02, 0.2, vDir.y);
+        }
         gl_FragColor = vec4(c, 1.0);
         #include <colorspace_fragment>
       }`,
@@ -101,12 +165,8 @@ function buildSky() {
   return mesh;
 }
 
-function buildDistantHills(rng) {
+function buildDistantHills(rng, layers) {
   const group = new THREE.Group();
-  const layers = [
-    { r: 560, h: 46, color: 0x6e3a3a },
-    { r: 430, h: 28, color: 0x4d2a2c },
-  ];
   for (const l of layers) {
     const n = 180;
     const pos = [];
@@ -130,155 +190,43 @@ function buildDistantHills(rng) {
   return group;
 }
 
-function paintGround(track) {
-  const b = track.bounds;
-  const spanX = b.maxX - b.minX, spanZ = b.maxZ - b.minZ;
-  const W = 2300, H = Math.round((W * spanZ) / spanX);
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  const img = ctx.createImageData(W, H);
-  const rng = createRng(77);
+// Ground maps outlive the stage that showed them. The worker fills this in the background.
+const paintedGrounds = new Map();
 
-  const clay = [158, 92, 54], clay2 = [132, 72, 44];
-  const asphalt = [118, 98, 84], asphalt2 = [96, 84, 76];
-  const mud = [58, 40, 28], mud2 = [44, 30, 22];
-  const grass = [96, 92, 44], grass2 = [120, 104, 50];
+export function adoptGround(id, maps) {
+  if (!paintedGrounds.has(id)) paintedGrounds.set(id, maps);
+}
 
-  const fbm = (x, z) =>
-    0.5 * Math.sin(x * 0.11 + 2 * Math.sin(z * 0.07)) +
-    0.3 * Math.sin(z * 0.23 + 1.7 * Math.sin(x * 0.19)) +
-    0.2 * Math.sin((x + z) * 0.53);
-
-  for (let py = 0; py < H; py++) {
-    const z = b.minZ + (py / (H - 1)) * spanZ;
-    for (let px = 0; px < W; px++) {
-      const x = b.minX + (px / (W - 1)) * spanX;
-      const inside = track.sdfAt(x, z) > 0;
-      const n = fbm(x, z) * 0.5 + 0.5 + (rng() - 0.5) * 0.3;
-      let A, B;
-      if (!inside) { A = grass; B = grass2; }
-      else {
-        // Jittered lookup, so clay spills across the tarmac instead of stopping on a line.
-        const s = track.surfaceAt(x + (rng() - 0.5) * 7 + fbm(z, x) * 3, z + (rng() - 0.5) * 7);
-        if (s === SURFACE.ASPHALT) { A = asphalt; B = asphalt2; }
-        else if (s === SURFACE.MUD) { A = mud; B = mud2; }
-        else { A = clay; B = clay2; }
-      }
-      const i = (py * W + px) * 4;
-      img.data[i] = A[0] + (B[0] - A[0]) * n;
-      img.data[i + 1] = A[1] + (B[1] - A[1]) * n;
-      img.data[i + 2] = A[2] + (B[2] - A[2]) * n;
-      img.data[i + 3] = 255;
+// Without the worker, paint here. It's slow, but it only happens once for a course.
+function groundMaps(track) {
+  const id = track.course.id;
+  if (!paintedGrounds.has(id)) {
+    const canvasFor = (size) => Object.assign(document.createElement('canvas'), size);
+    const map = canvasFor(groundSize(track));
+    paintGround(track, map);
+    let glow = null;
+    if (GROUNDS[id].glow) {
+      glow = canvasFor(glowSize(track));
+      paintGlow(track, glow);
     }
+    paintedGrounds.set(id, { map, glow });
   }
-  ctx.putImageData(img, 0, 0);
+  return paintedGrounds.get(id);
+}
 
-  const toPx = (x, z) => [((x - b.minX) / spanX) * W, ((z - b.minZ) / spanZ) * H];
-  const scale = W / spanX;
-
-  // Grooves worn along the line everybody actually drives.
-  const c = track.centre;
-  const line = track.line;
-  for (const [offset, alpha, width] of [[-2.2, 0.08, 2], [0, 0.2, 3.4], [2.4, 0.09, 2.2]]) {
-    ctx.strokeStyle = `rgba(30,18,12,${alpha})`;
-    ctx.lineWidth = width * scale;
-    ctx.beginPath();
-    for (let i = 0; i <= c.n; i++) {
-      const k = i % c.n;
-      const wob = Math.sin(i * 0.05) * 0.5;
-      const [x, y] = toPx(line.px[k] - line.tz[k] * (offset + wob), line.pz[k] + line.tx[k] * (offset + wob));
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  }
-
-  // Hazard stripes on every crossroads, clipped to the patch both roads share.
-  for (const x of track.crossings) {
-    const [ox, oy] = toPx(x.x, x.z);
-    ctx.save();
-    ctx.translate(ox, oy);
-    ctx.scale(scale, scale);
-    ctx.beginPath();
-    ctx.arc(0, 0, 10.5, 0, Math.PI * 2);
-    ctx.clip();
-    ctx.globalAlpha = 0.62;
-    ctx.fillStyle = '#e8b023';
-    ctx.rotate(Math.PI / 4);
-    for (let i = -6; i <= 6; i++) ctx.fillRect(i * 3.6 - 0.8, -12, 1.6, 24);
-    ctx.restore();
-  }
-
-  // Chevrons up each kicker and a bar across the lip, so a jump reads from the air.
-  for (const j of track.jumps) {
-    const lip = track.indexAt(j.lipS);
-    const hw = track.hw[lip];
-    for (let d = 2; d < j.lipS - j.startS; d += 3.4) {
-      const i = track.indexAt(j.lipS - d);
-      const [px, py] = toPx(c.px[i], c.pz[i]);
-      ctx.save();
-      ctx.translate(px, py);
-      ctx.rotate(Math.atan2(c.tz[i], c.tx[i]));
-      ctx.scale(scale, scale);
-      ctx.fillStyle = '#c8321f';
-      ctx.globalAlpha = 0.8;
-      for (const side of [-1, 1]) {
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(-2.4, side * hw);
-        ctx.lineTo(-3.6, side * hw);
-        ctx.lineTo(-1.2, 0);
-        ctx.closePath();
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-    const [lx, ly] = toPx(c.px[lip], c.pz[lip]);
-    ctx.save();
-    ctx.translate(lx, ly);
-    ctx.rotate(Math.atan2(c.tz[lip], c.tx[lip]));
-    ctx.scale(scale, scale);
-    ctx.fillStyle = '#ece3cd';
-    ctx.fillRect(-0.7, -hw, 1.4, hw * 2);
-    ctx.restore();
-  }
-
-  // Finish line across the back straight.
-  const startLine = track.indexAt(FINISH_LINE_S);
-  const [sx, sy] = toPx(c.px[startLine], c.pz[startLine]);
-  const startWidth = track.hw[startLine];
-  ctx.save();
-  ctx.translate(sx, sy);
-  ctx.rotate(Math.atan2(c.tz[startLine], c.tx[startLine]));
-  ctx.scale(scale, scale);
-  const tiles = Math.round((startWidth * 2) / 1.5);
-  for (let i = 0; i < tiles; i++) {
-    for (let j = 0; j < 3; j++) {
-      ctx.fillStyle = (i + j) % 2 ? '#ece3cd' : '#1a1b20';
-      ctx.fillRect(j * 1.5 - 2.2, i * 1.5 - startWidth, 1.5, 1.5);
-    }
-  }
-  ctx.restore();
-
-  // Plain start line in front of the grid.
-  const gridLine = track.indexAt(GRID_LINE_S);
-  const [gx, gy] = toPx(c.px[gridLine], c.pz[gridLine]);
-  ctx.save();
-  ctx.translate(gx, gy);
-  ctx.rotate(Math.atan2(c.tz[gridLine], c.tx[gridLine]));
-  ctx.scale(scale, scale);
-  ctx.fillStyle = '#ece3cd';
-  ctx.fillRect(1.6, -track.hw[gridLine], 1.1, track.hw[gridLine] * 2);
-  ctx.restore();
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
-  tex.generateMipmaps = true;
+// A worker hands over an ImageBitmap, and those always upload the right way up.
+function textureOf(source) {
+  const tex = source instanceof HTMLCanvasElement ? new THREE.CanvasTexture(source) : new THREE.Texture(source);
+  tex.flipY = source instanceof HTMLCanvasElement;
+  tex.needsUpdate = true;
   return tex;
 }
 
-function buildTerrain(track) {
+function buildTerrain(track, look) {
+  const maps = groundMaps(track);
+  const map = textureOf(maps.map);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.anisotropy = 8;
   const b = track.bounds;
   const nx = b.maxX - b.minX + 1, nz = b.maxZ - b.minZ + 1;
   const pos = new Float32Array(nx * nz * 3);
@@ -292,7 +240,7 @@ function buildTerrain(track) {
       pos[i * 3 + 1] = track.heightAt(x, z);
       pos[i * 3 + 2] = z;
       uv[i * 2] = ix / (nx - 1);
-      uv[i * 2 + 1] = 1 - iz / (nz - 1);
+      uv[i * 2 + 1] = map.flipY ? 1 - iz / (nz - 1) : iz / (nz - 1);
     }
   }
   const idx = [];
@@ -307,7 +255,12 @@ function buildTerrain(track) {
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.setIndex(idx);
   geo.computeVertexNormals();
-  const mat = new THREE.MeshStandardMaterial({ map: paintGround(track), roughness: 0.95, metalness: 0 });
+  const mat = new THREE.MeshStandardMaterial({ map, roughness: 0.95, metalness: 0 });
+  if (maps.glow) {
+    mat.emissive = new THREE.Color(look.glowColor);
+    mat.emissiveIntensity = look.glowPower;
+    mat.emissiveMap = textureOf(maps.glow);
+  }
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;
 
@@ -315,28 +268,18 @@ function buildTerrain(track) {
   group.add(mesh);
   const apron = new THREE.Mesh(
     new THREE.CircleGeometry(860, 48).rotateX(-Math.PI / 2),
-    new THREE.MeshStandardMaterial({ color: 0x6c5a33, roughness: 1 }),
+    new THREE.MeshStandardMaterial({ color: look.apron, roughness: 1 }),
   );
   apron.position.y = -0.6;
   group.add(apron);
   return group;
 }
 
-// Sign-painted hoardings along the barrier. Every sponsor here is invented.
-function paintHoardings() {
+// Sign-painted hoardings along the barrier.
+function paintHoardings(panels) {
   const canvas = document.createElement('canvas');
   canvas.width = 2048; canvas.height = 128;
   const ctx = canvas.getContext('2d');
-  const panels = [
-    ['#c8321f', '#f3e2bd', "BIG DON'S TOWING"],
-    ['#e8b023', '#1a1b20', 'HOT LARD DONUTS'],
-    ['#1f6b6b', '#f3e2bd', 'TRI-COUNTY SCRAP'],
-    ['#f3e2bd', '#c8321f', 'NO REFUNDS'],
-    ['#2a2c35', '#e8b023', 'LOU\'S RADIATORS'],
-    ['#c8321f', '#f3e2bd', 'DENTS WHILE U WAIT'],
-    ['#1f6b6b', '#e8b023', 'FAIRVIEW CHIROPRACTIC'],
-    ['#e8b023', '#c8321f', 'GRUDGE BOWL'],
-  ];
   const w = canvas.width / panels.length;
   panels.forEach(([bg, fg, text], i) => {
     ctx.fillStyle = bg;
@@ -361,7 +304,7 @@ function paintHoardings() {
   return tex;
 }
 
-function buildBarriers(track) {
+function buildBarriers(track, panels) {
   const positions = [], uvs = [], indices = [];
   const profile = [[0.32, -0.3], [0.32, 0.25], [0.12, 1.15], [-0.12, 1.15], [-0.32, 0.25], [-0.32, -0.3]];
   const vProfile = [0, 0.1, 1, 0.02, 0.02, 0.02];
@@ -405,7 +348,7 @@ function buildBarriers(track) {
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geo.setIndex(indices);
   geo.computeVertexNormals();
-  const mat = new THREE.MeshStandardMaterial({ map: paintHoardings(), roughness: 0.85, side: THREE.DoubleSide });
+  const mat = new THREE.MeshStandardMaterial({ map: paintHoardings(panels), roughness: 0.85, side: THREE.DoubleSide });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -462,33 +405,6 @@ function buildCatchFence(track) {
   return new THREE.Mesh(geo, mat);
 }
 
-// One material that takes its colour from the shape, and an instance tint if it has one.
-const painted = (roughness = 0.85) => new THREE.MeshStandardMaterial({ vertexColors: true, roughness });
-
-function solid(geometry, material = painted(), shadow = true) {
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.castShadow = shadow;
-  mesh.receiveShadow = shadow;
-  return mesh;
-}
-
-// The same shape, many times. `place` poses `dummy` and sets `tint` for each one.
-function instanced(geometry, material, count, place) {
-  const mesh = new THREE.InstancedMesh(geometry, material, count);
-  const dummy = new THREE.Object3D();
-  const tint = new THREE.Color(1, 1, 1);
-  for (let i = 0; i < count; i++) {
-    place(dummy, tint, i);
-    dummy.updateMatrix();
-    mesh.setMatrixAt(i, dummy.matrix);
-    mesh.setColorAt(i, tint);
-  }
-  mesh.instanceMatrix.needsUpdate = true;
-  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  mesh.computeBoundingSphere();
-  return mesh;
-}
-
 function buildFencePosts(track) {
   const spots = [];
   for (const poly of track.polys) {
@@ -511,41 +427,12 @@ function buildFencePosts(track) {
   });
 }
 
-const SHIRTS = [0xc8321f, 0xe8b023, 0x1f6b6b, 0xf3e2bd, 0x34404f, 0x8a5a33, 0x9aa8b6, 0xc77a36, 0x3f5e8c, 0xe9e4d8, 0x7a2d3a];
-const SKIN = [0xf0c9a4, 0xd9a77e, 0xb57f55, 0x8a5a3a, 0x5e3c28, 0xe8bd96];
-const HATS = [0xdcc48a, 0xc8321f, 0x2a2c35, 0x1f6b6b, 0xe9e4d8];
+const track_at = (track, s) => {
+  const i = track.indexAt(s);
+  return [track.centre.px[i], track.centre.pz[i]];
+};
 
-// A crowd of one span, in three instanced meshes so a stand off camera costs nothing.
-function buildCrowd(seats, rng) {
-  const group = new THREE.Group();
-  const pick = (list) => list[Math.floor(rng() * list.length)];
-  const pose = (dummy, seat) => {
-    dummy.position.set(seat.x, seat.y, seat.z);
-    dummy.rotation.set(0, seat.yaw, 0);
-    dummy.scale.setScalar(seat.size);
-  };
-  const shared = { seated: painted(0.9), head: painted(0.8) };
-  for (const cheering of [false, true]) {
-    const some = seats.filter((seat) => seat.cheering === cheering);
-    if (some.length === 0) continue;
-    group.add(instanced(spectatorBody(cheering), shared.seated, some.length, (dummy, tint, i) => {
-      pose(dummy, some[i]);
-      tint.setHex(pick(SHIRTS));
-    }));
-  }
-  group.add(instanced(spectatorHead(), shared.head, seats.length, (dummy, tint, i) => {
-    pose(dummy, seats[i]);
-    tint.setHex(pick(SKIN));
-  }));
-  const hatted = seats.filter((seat) => seat.hat);
-  group.add(instanced(spectatorHat(), shared.head, hatted.length, (dummy, tint, i) => {
-    pose(dummy, hatted[i]);
-    tint.setHex(pick(HATS));
-  }));
-  return group;
-}
-
-function buildGrandstands(track, rng) {
+export function buildGrandstands(track, rng, spans, crowd) {
   const group = new THREE.Group();
   const tiers = 8;
   const concrete = new THREE.MeshStandardMaterial({ color: 0x8a7a68, roughness: 0.95, side: THREE.DoubleSide });
@@ -557,18 +444,19 @@ function buildGrandstands(track, rng) {
   const clear = (x, z) => track.sdfAt(x, z) < -2.5;
   const quad = (list, a, b, d, e) => list.push(...a, ...b, ...d, ...a, ...d, ...e);
 
-  STAND_SPANS.map((span) => span.map((v) => track.passes[v[0]].s + v[1])).forEach(([from, to]) => {
+  spans.forEach(({ from, to, side = 1 }) => {
     const seats = [];
+    const floor = track.course.ground ? track.heightAt(...track_at(track, (from + to) / 2)) : 0;
     for (let t = 0; t < tiers; t++) {
-      const y = 2.3 + t * 0.95;
+      const y = floor + 2.3 + t * 0.95;
       const near = 5.5 + t * 1.5;
       const riser = t === 0 ? y : 0.97;
       let last = null;
-      const wall = (p) => quad(positions, [p.x0, y, p.z0], [p.x1, y, p.z1], [p.x1, 0, p.z1], [p.x0, 0, p.z0]);
+      const wall = (p) => quad(positions, [p.x0, y, p.z0], [p.x1, y, p.z1], [p.x1, floor, p.z1], [p.x0, floor, p.z0]);
       for (let s = from; s <= to + 3; s += 3) {
         const i = track.indexAt(s);
-        // Every corner here is a right-hander, so the outside is on the left.
-        const nx = c.tz[i], nz = -c.tx[i];
+        // On the Knot every corner is a right-hander, so the outside is on the left.
+        const nx = c.tz[i] * side, nz = -c.tx[i] * side;
         const r = track.hw[i] + near;
         const x0 = c.px[i] + nx * r, z0 = c.pz[i] + nz * r;
         const x1 = x0 + nx * 1.6, z1 = z0 + nz * 1.6;
@@ -580,7 +468,7 @@ function buildGrandstands(track, rng) {
           quad(positions, [last.x0, y, last.z0], [here.x0, y, here.z0], [here.x1, y, here.z1], [last.x1, y, last.z1]);
           quad(positions, [last.x0, y - riser, last.z0], [here.x0, y - riser, here.z0], [here.x0, y, here.z0], [last.x0, y, last.z0]);
           if (t === tiers - 1) {
-            quad(positions, [last.x1, y + 1.4, last.z1], [here.x1, y + 1.4, here.z1], [here.x1, 0, here.z1], [last.x1, 0, last.z1]);
+            quad(positions, [last.x1, y + 1.4, last.z1], [here.x1, y + 1.4, here.z1], [here.x1, floor, here.z1], [last.x1, floor, last.z1]);
           }
           const bench = (p, out) => [p.x0 + p.nx * out, y + 0.45, p.z0 + p.nz * out];
           const low = (p, out) => [p.x0 + p.nx * out, y, p.z0 + p.nz * out];
@@ -608,7 +496,7 @@ function buildGrandstands(track, rng) {
         last = here;
       }
     }
-    group.add(buildCrowd(seats, rng));
+    group.add(buildCrowd(seats, rng, crowd));
   });
 
   const sheet = (list, material) => {
@@ -625,32 +513,6 @@ function buildGrandstands(track, rng) {
   return group;
 }
 
-function makeSign(text, width, height, bg, fg) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 1024;
-  canvas.height = Math.round((1024 * height) / width);
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = fg;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  let size = canvas.height * 0.72;
-  ctx.font = `${size}px 'Bowlby One', Impact, sans-serif`;
-  while (ctx.measureText(text).width > canvas.width * 0.92) {
-    size -= 4;
-    ctx.font = `${size}px 'Bowlby One', Impact, sans-serif`;
-  }
-  ctx.fillText(text, canvas.width / 2, canvas.height * 0.54);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.Mesh(
-    new THREE.PlaneGeometry(width, height),
-    new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8, side: THREE.DoubleSide }),
-  );
-}
-
-// Middle of a wall loop, and how far around it the loop reaches.
 function loopCentre(poly) {
   let x = 0, z = 0;
   for (const p of poly) { x += p[0]; z += p[1]; }

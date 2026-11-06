@@ -5,7 +5,7 @@
 //
 // Body frame: +X forward, +Y up, +Z right.
 
-import { CAR, DAMAGE, TIRE, ENGINE, GRAVITY, FINISH_LINE_S, SURFACE_PROPS } from './config.js';
+import { CAR, DAMAGE, TIRE, ENGINE, SURFACE_PROPS } from './config.js';
 import { clamp, quatToMatrix } from './math.js';
 
 const WHEEL_LAYOUT = [
@@ -89,7 +89,7 @@ export function createCar(id, roster, spawn, track) {
     lapsAnnounced: 0,
     finishFraction: Infinity,
     trackS: spawn.s,
-    progress: signedLap(spawn.s - FINISH_LINE_S, track.length),
+    progress: signedLap(spawn.s - track.finishS, track.length),
     lastProgressS: spawn.s,
     finishPos: 0,
     koReason: null,
@@ -98,7 +98,7 @@ export function createCar(id, roster, spawn, track) {
     lastHitter: -1,
     lastHitterTime: -999,
     flippedTime: 0,
-    stallMark: signedLap(spawn.s - FINISH_LINE_S, track.length),
+    stallMark: signedLap(spawn.s - track.finishS, track.length),
     stallTime: 0,
     airTime: 0,
     prevVy: 0,
@@ -216,7 +216,7 @@ export function stepCarForces(car, track, dt) {
 
   updateDrivetrain(car, dt);
 
-  let fx = 0, fy = -CAR.mass * GRAVITY, fz = 0;
+  let fx = 0, fy = -CAR.mass * (car.airborne ? track.airGravity : track.gravity), fz = 0;
   let tx = 0, ty = 0, tz = 0;
   const cosD = Math.cos(car.steerAngle), sinD = Math.sin(car.steerAngle);
   let contacts = 0;

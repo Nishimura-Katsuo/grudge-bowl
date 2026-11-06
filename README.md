@@ -19,6 +19,14 @@ npm test          # physics and network tests
 
 ## Watching
 
+Races rotate through five worlds, each dealt once before any comes round again:
+
+- **The Knot**, the county fairground at last light, where it all started.
+- **Gutbuster Park**, a closed theme park at night, with the road through the big top and the rides still running.
+- **Mount Cinder**, up the outside of a volcano, round its lava lake and down the throat, under falling lava bombs.
+- **Davy's Driveway**, on the sea floor: glass tubes, a shipwreck, a whale and something large in the trench.
+- **Lower Tranquillity**, on the Moon. Tyres on the ground drive normally. Once they leave it, cars float.
+
 The Grudge Board is the running order. Click a name to follow that bot. Red yarn runs from each bot to whoever its network is leaning on right now, and the face at the end of its row shows how angry its rage neuron is. Keys 1 to 6 pick a camera (chase, grille, trackside, drone, tower, heli), A hands it back to the director, `[` and `]` step between cars, Space pauses, M mutes.
 
 ## Rules

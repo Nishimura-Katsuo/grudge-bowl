@@ -23,6 +23,18 @@ const brainPlugin = {
   },
 };
 
+// A worker has to arrive as one file, so it's bundled by itself and carried as text.
+const workerPlugin = {
+  name: 'inline-worker',
+  setup(b) {
+    b.onResolve({ filter: /\?worker$/ }, (args) => ({ path: resolve(args.resolveDir, args.path.replace('?worker', '')), namespace: 'worker' }));
+    b.onLoad({ filter: /.*/, namespace: 'worker' }, async (args) => {
+      const bundled = await build({ entryPoints: [args.path], bundle: true, minify: true, format: 'iife', target: 'es2022', write: false });
+      return { contents: bundled.outputFiles[0].text, loader: 'text' };
+    });
+  },
+};
+
 const result = await build({
   absWorkingDir: root,
   entryPoints: ['src/main.js'],
@@ -34,7 +46,7 @@ const result = await build({
   outdir: 'out',
   loader: { '.woff2': 'dataurl', '.woff': 'empty', '.png': 'dataurl' },
   logLevel: 'warning',
-  plugins: [brainPlugin],
+  plugins: [brainPlugin, workerPlugin],
 });
 
 let js = '', css = '';

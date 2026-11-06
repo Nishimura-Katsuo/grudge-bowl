@@ -129,6 +129,19 @@ button:focus-visible { outline: 3px solid var(--mustard); outline-offset: 2px; }
 #radio iframe { display: block; width: 340px; height: 108px; border: 0; }
 #radio:empty { display: none; }
 
+/* Where this race is, across the top of the picture for the countdown. */
+#course-card {
+  position: fixed; left: 50%; top: 9vh; transform: translate(-50%, -10px);
+  text-align: center; pointer-events: none; opacity: 0;
+  transition: opacity .5s, transform .5s;
+  text-shadow: 0 3px 0 rgba(40,15,0,.6), 0 0 22px rgba(40,15,0,.5);
+}
+#course-card.show { opacity: 1; transform: translate(-50%, 0); }
+#course-card h2 { margin: 0; font: 400 64px/1 var(--display); color: var(--paint); white-space: nowrap; }
+#course-card p { margin: 4px 0 0; font-weight: 700; }
+#course-place { font-size: 24px; color: var(--mustard); }
+#course-blurb { font-size: 21px; color: var(--paint); }
+
 /* Title and finish cards: a fair poster, nailed up over the picture. */
 .poster {
   position: fixed; inset: 0; display: grid; place-items: center; padding: 16px;

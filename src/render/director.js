@@ -33,6 +33,12 @@ function closestApproach(a, b) {
   return { t, miss: Math.hypot(mx, mz), closing: Math.sqrt(rv2) };
 }
 
+const SIGHT_STEP = 3; // metres between checks along a line of sight
+const SIGHT_GRACE = 4; // the road's own shoulder right beside the car doesn't count
+const TOWER_DECK = 19;
+const HELI_HEIGHT = 104;
+const HELI_CEILING = 220;
+
 export class Director {
   constructor(camera, track) {
     this.camera = camera;
@@ -60,7 +66,18 @@ export class Director {
     this.victor = -1;
     this.heldShot = null;
     this.wreckSite = new THREE.Vector3();
-    this.heart = centreOfCrossroads(track);
+    this.setTrack(track);
+  }
+
+  setTrack(track) {
+    this.track = track;
+    this.post = null;
+    const towers = track.course.towers;
+    this.heart = towers ? { x: towers[0][0], y: towers[0][1], z: towers[0][2] } : centreOfCrossroads(track);
+    if (!towers) this.heart.y = track.heightAt(this.heart.x, this.heart.z);
+    this.towers = towers ? towers.map(([x, y, z]) => ({ x, y, z })) : [this.heart];
+    this.tower = this.towers[0];
+    this.heliTurn = 0;
     this.posts = this.buildPosts();
     this.landingPosts = track.jumps.map((j) => this.landingPost(j));
   }
@@ -250,6 +267,13 @@ export class Director {
 
     if (this.followHold > 0) return;
 
+    // Nothing outside can see under a roof, so ride in with the car.
+    const roofed = this.shot === 'drone' || this.shot === 'tower' || this.shot === 'heli' || this.shot === 'trackside';
+    if (roofed && !this.manualShot && this.track.coveredAt(cars[this.subject].trackS)) {
+      this.cut('chase', this.subject, -1);
+      return;
+    }
+
     const jumpShot = this.shotAge > 1.8 && this.shot !== 'wreck' ? this.findJumpShot(cars) : null;
     if (jumpShot) {
       this.cut('trackside', jumpShot.first, jumpShot.second);
@@ -288,6 +312,39 @@ export class Director {
       const partner = tele && tele.targetId >= 0 && cars[tele.targetId]?.alive ? tele.targetId : -1;
       this.cut(shot, best, partner);
     }
+  }
+
+  // Can a lens at a see a point at b, or does the ground get in the way?
+  sees(ax, ay, az, bx, by, bz) {
+    const t = this.track;
+    const reach = Math.hypot(bx - ax, bz - az);
+    for (let d = SIGHT_STEP; d < reach - SIGHT_GRACE; d += SIGHT_STEP) {
+      const u = d / reach;
+      if (ay + (by - ay) * u < t.heightAt(ax + (bx - ax) * u, az + (bz - az) * u)) return false;
+    }
+    return true;
+  }
+
+  // High enough to look down over a near rim into a crater.
+  heliHeight(a, subj) {
+    let y = HELI_HEIGHT;
+    while (y < HELI_CEILING && !this.sees(Math.cos(a) * 205, y, Math.sin(a) * 205, subj.x, subj.y + 0.6, subj.z)) y += 8;
+    return y;
+  }
+
+  // Stay on the tower in use while it can see. When a hill gets in the way, move to the
+  // nearest one that can.
+  pickTower(subj) {
+    const sight = (w) => this.sees(w.x, w.y + TOWER_DECK, w.z, subj.x, subj.y + 0.6, subj.z);
+    if (sight(this.tower)) return false;
+    let best = null, bestD = Infinity;
+    for (const w of this.towers) {
+      const d = Math.hypot(w.x - subj.x, w.z - subj.z);
+      if (d < bestD && sight(w)) { bestD = d; best = w; }
+    }
+    if (!best) return false;
+    this.tower = best;
+    return true;
   }
 
   // Keeps roving cameras on the driveable side of the barrier and above its top
@@ -362,8 +419,9 @@ export class Director {
         const t = world.time;
         const a = -0.6 + t * 0.26;
         const mid = world.cars[Math.floor(world.cars.length / 2)];
-        desiredPos.set(mid.px + Math.cos(a) * 15, 2.8, mid.pz + Math.sin(a) * 15);
-        desiredLook.set(mid.px + fx * 6, 1.1, mid.pz + fz * 6);
+        const floor = this.track.heightAt(mid.px, mid.pz);
+        desiredPos.set(mid.px + Math.cos(a) * 15, floor + 2.8, mid.pz + Math.sin(a) * 15);
+        desiredLook.set(mid.px + fx * 6, floor + 1.1, mid.pz + fz * 6);
         snapNow = this.shotAge < 0.1;
         this.targetFov = 44;
         posRate = 30;
@@ -426,8 +484,10 @@ export class Director {
       }
       case 'tower': {
         // The rail of the marshal's deck, on whichever side faces the subject.
-        const out = Math.atan2(subj.z - this.heart.z, subj.x - this.heart.x);
-        desiredPos.set(this.heart.x + Math.cos(out) * 4.4, 19, this.heart.z + Math.sin(out) * 4.4);
+        if (this.pickTower(subj)) snapNow = true;
+        const deck = this.tower;
+        const out = Math.atan2(subj.z - deck.z, subj.x - deck.x);
+        desiredPos.set(deck.x + Math.cos(out) * 4.4, deck.y + TOWER_DECK, deck.z + Math.sin(out) * 4.4);
         if (partner) desiredLook.lerp(partner, 0.5);
         const range = desiredPos.distanceTo(desiredLook);
         this.targetFov = clamp(2400 / Math.max(range, 20), 12, 60);
@@ -436,9 +496,17 @@ export class Director {
         break;
       }
       case 'heli': {
-        const a = 0.9 + this.time * 0.05;
-        desiredPos.set(Math.cos(a) * 205, 104, Math.sin(a) * 205);
-        desiredLook.set(this.heart.x, 0, this.heart.z);
+        const circling = 0.9 + this.time * 0.05;
+        let a = circling + this.heliTurn;
+        // A far rim hides more than height can fix, so swing round to the subject's side.
+        if (!this.sees(Math.cos(a) * 205, 104, Math.sin(a) * 205, subj.x, subj.y + 0.6, subj.z)) {
+          a = Math.atan2(subj.z - this.heart.z, subj.x - this.heart.x);
+          this.heliTurn = a - circling;
+        }
+        desiredPos.set(Math.cos(a) * 205, this.heliHeight(a, subj), Math.sin(a) * 205);
+        desiredLook.set(this.heart.x, this.heart.y, this.heart.z);
+        // On a mountain the middle of the map is rock, so frame the road as well.
+        if (this.towers.length > 1) desiredLook.lerp(subj, 0.65);
         this.targetFov = 42;
         posRate = 2.5;
         lookRate = 2.5;
@@ -484,6 +552,8 @@ export class Director {
       // Easing between clear positions can still cut across a barrier.
       this.keepLensClear(this.camPos, this.lookAt, shot);
     }
+    // Hills can come up through any shot, however it was framed.
+    this.camPos.y = Math.max(this.camPos.y, this.track.heightAt(this.camPos.x, this.camPos.z) + 1);
 
     this.shakeAmp *= Math.exp(-5.5 * dt);
     const t = this.time * 41;

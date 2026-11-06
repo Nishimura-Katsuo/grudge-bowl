@@ -13,9 +13,11 @@ import './ui/style.css';
 import { PHYSICS_DT } from './sim/config.js';
 import { createWorld, stepWorld } from './sim/world.js';
 import { lineupFor } from './sim/roster.js';
-import { getTrack } from './sim/track.js';
+import { adoptTrack, getTrack } from './sim/track.js';
+import preloadSource from './preload.worker.js?worker';
+import { courseDealer, COURSES } from './sim/courses.js';
 import { createBrain } from './ai/index.js';
-import { buildStage } from './render/stage.js';
+import { adoptGround, buildStage } from './render/stage.js';
 import { createCarVisual, crumple, retireCarVisual, syncCarVisual } from './render/carModel.js';
 import { Effects } from './render/effects.js';
 import { ArsenalView } from './render/arsenalView.js';
@@ -66,15 +68,16 @@ const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.34, 0.65, 0.88)
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
-const track = getTrack();
 let stage = null;
 let effects = null;
 let arsenalView = null;
-const director = new Director(camera, track);
+const director = new Director(camera, getTrack());
 const audio = new Audio();
 
 const state = {
   world: null,
+  course: null,
+  upNext: null,
   brains: [],
   visuals: [],
   seed: 1,
@@ -130,11 +133,45 @@ function clearVisuals() {
   state.visuals = [];
 }
 
+const dealCourse = courseDealer(Math.random);
+
+// Builds the courses behind the race, the one coming up first.
+function preloadCourses() {
+  const order = [...new Set([state.upNext, ...Object.keys(COURSES)])];
+  try {
+    const url = URL.createObjectURL(new Blob([preloadSource], { type: 'text/javascript' }));
+    const worker = new Worker(url);
+    worker.onmessage = ({ data }) => {
+      adoptTrack(data.track);
+      adoptGround(data.id, data);
+    };
+    worker.onerror = () => worker.terminate();
+    worker.postMessage(order);
+  } catch {
+    // No worker: each course is built when it comes up, as it always could be.
+  }
+}
+
+function loadCourse(id) {
+  if (id === state.course) return;
+  state.course = id;
+  const track = getTrack(id);
+  stage?.dispose();
+  stage = buildStage(scene, track);
+  renderer.toneMappingExposure = stage.exposure;
+  effects.setTrack(track);
+  arsenalView.track = track;
+  director.setTrack(track);
+}
+
 function newRace() {
   audio.newRace();
   clearTimeout(state.finishTimer);
   arsenalView.reset(); // first: its blades are parented to the car visuals
   clearVisuals();
+  const course = state.upNext ?? dealCourse();
+  state.upNext = dealCourse();
+  loadCourse(course);
   effects.reset();
   director.endFeature();
   state.scene = null;
@@ -143,6 +180,7 @@ function newRace() {
   state.brains = [];
   const world = createWorld({
     seed: state.seed,
+    course,
     lineup: lineupFor(state.seed),
     brainFactory: (car) => {
       const brain = createBrain(car);
@@ -162,6 +200,7 @@ function newRace() {
   state.retired = new Set();
   state.slowMo = 0;
   hud.build(world);
+  if (state.running) hud.showCourse(COURSES[course]);
   director.cut(director.manualShot ?? 'chase', 0, -1);
   director.followHold = 0;
 }
@@ -252,6 +291,9 @@ function handleEvent(e, world) {
     case 'hooked':
       audio.hooked(heard(e.x, e.z));
       break;
+    case 'lavaLands':
+      if (heard(e.x, e.z).near > 0.3) director.shake(0.7);
+      break;
     case 'sprung':
       effects.landing(e.x, e.y, e.z, 6);
       audio.boing(heard(e.x, e.z));
@@ -292,7 +334,7 @@ function runScene(scene, world, dt) {
   if (!scene.shown) {
     scene.shown = true;
     director.feature(world.winner);
-    hud.setNextRace(Math.ceil(scene.left));
+    hud.setNextRace(Math.ceil(scene.left), COURSES[state.upNext].name);
     hud.showFinish(world);
     audio.cheer(1);
   }
@@ -301,7 +343,7 @@ function runScene(scene, world, dt) {
     newRace();
     return;
   }
-  hud.setNextRace(Math.ceil(scene.left));
+  hud.setNextRace(Math.ceil(scene.left), COURSES[state.upNext].name);
   const winner = world.cars[world.winner];
   scene.confetti -= dt;
   if (winner && scene.confetti <= 0) {
@@ -354,7 +396,7 @@ function frame(now) {
     arsenalView.sync(world, state.visuals, fxDt, now / 1000);
     effects.update(fxDt);
     const camPos = director.update(realDt, world, state.visuals, telemetryOf);
-    stage.update(state.visuals[director.subject].root.position);
+    stage.update(state.visuals[director.subject].root.position, now / 1000, fxDt);
     effects.setViewport(window.innerHeight * renderer.getPixelRatio(), camera.fov);
 
     const subj = world.cars[director.subject];
@@ -417,11 +459,11 @@ async function boot() {
   } catch {
     // Signs fall back to the system stack; the race still runs.
   }
-  stage = buildStage(scene, track);
-  effects = new Effects(scene, track, renderer);
-  arsenalView = new ArsenalView(scene, track, effects);
+  effects = new Effects(scene, getTrack(), renderer);
+  arsenalView = new ArsenalView(scene, getTrack(), effects);
   resize();
   newRace();
+  preloadCourses();
   director.cut('heli', 0, -1);
   requestAnimationFrame(frame);
   document.body.classList.add('ready');
@@ -429,4 +471,4 @@ async function boot() {
 }
 boot();
 
-window.__grudge = { state, director, audio, get world() { return state.world; }, renderer };
+window.__grudge = { state, director, audio, get world() { return state.world; }, get arsenalView() { return arsenalView; }, renderer, newRace };

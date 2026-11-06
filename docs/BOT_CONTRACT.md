@@ -88,6 +88,17 @@ Sensors:
 
 Hits from weapons are credited like car hits, so a weapon kill counts and sets `lastHitter`, which drives the Grudge Seeker. Events: `pickup`, `fired`, `blast`, `hooked`, `sprung`, `gored`, `cut`, `pianoLands`.
 
+## Courses
+
+Every course is a table in `src/sim/courses.js`, and everything a brain reads is derived from it, so a brain needs no knowledge of which course it is on. `world.laps` and `track.finishS` differ by course to keep races near 3:00. Hills, roofs and lane position all reach the brain only through the sensors it already has.
+
+- **Crests**: on a course with hills, `ego.pace` also holds cars below the speed that would take them off the road over a crest.
+- **Roofs**: `track.covers` are pictures only. They have no effect on the sim, except that lava bombs don't fall on a stretch with an opaque roof.
+- **Lava bombs** (Mount Cinder): every 2.6 s or so, on average, a bomb lands on the road ahead of a random car. It reads as a drop aimed at that car, so `arms.incoming` warns of it. No car is credited with the damage.
+- **Floating** (Lower Tranquillity): `track.airGravity` applies while a car is `airborne`. Its tyres on the ground get ordinary gravity.
+
+Which courses do what: Gutbuster Park has flat road, two crossroads and two jumps. Mount Cinder climbs from 0 to about 31 m, with one crossroads and two jumps. Davy's Driveway has low dunes, one crossroads and two jumps. Lower Tranquillity has three crossroads and two long jumps.
+
 ## The Knot
 
 Three at-grade crossroads at 60 degrees, each passed twice a lap, so a car meets cross traffic six times. Passes are at about s = 79, 129, 466, 516, 799, 850 (`track.passes`). All corners are right-handers.
