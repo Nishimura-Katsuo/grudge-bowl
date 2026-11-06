@@ -11,6 +11,9 @@ const hex = (n) => `#${n.toString(16).padStart(6, '0')}`;
 
 const NAME_FITS = 13; // characters that fit a board row at full size
 
+// Rage sits near .6 through a race, so these give each face about a third of the time.
+export const moodOf = (rage) => (rage < 0.4 ? 'calm' : rage < 0.75 ? 'irritated' : 'pissed');
+
 function readableInk(n) {
   const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
   return 0.299 * r + 0.587 * g + 0.114 * b > 140 ? '#1a1b20' : '#f3e2bd';
@@ -83,17 +86,15 @@ export class Hud {
       meters.className = 'meters';
       const hp = document.createElement('i');
       hp.className = 'hp';
-      const rage = document.createElement('i');
-      rage.className = 'rage';
-      meters.append(hp, rage);
+      meters.append(hp);
 
-      const score = document.createElement('span');
-      score.className = 'score';
+      const face = document.createElement('span');
+      face.className = 'face';
 
-      btn.append(num, name, meters, score);
+      btn.append(num, name, meters, face);
       li.append(btn);
       list.append(li);
-      return { li, hp, rage, score, name };
+      return { li, hp, face, name };
     });
     this.order = world.cars.map((c) => c.id);
     const yarn = this.el('yarn');
@@ -121,8 +122,6 @@ export class Hud {
     const cars = world.cars;
     const rowHeight = parseFloat(getComputedStyle(this.el('board')).getPropertyValue('--row')) || 34;
     this.order = raceOrder(cars).map((c) => c.id);
-    const leader = cars[this.order[0]];
-    const lapLength = world.track.length;
 
     this.order.forEach((id, rank) => {
       const row = this.rows[id];
@@ -130,8 +129,7 @@ export class Hud {
       const tele = telemetryOf(id);
       row.li.style.transform = `translateY(${rank * rowHeight}px)`;
       row.hp.style.transform = `scaleX(${car.health.toFixed(3)})`;
-      row.rage.style.transform = `scaleX(${(tele?.rage ?? 0).toFixed(3)})`;
-      row.score.textContent = this.gapText(car, leader, rank, lapLength, world.laps);
+      row.face.dataset.mood = moodOf(tele?.rage ?? 0);
       row.li.classList.toggle('dead', !car.alive);
       row.li.classList.toggle('focus', id === focusId);
     });
@@ -172,8 +170,6 @@ export class Hud {
     const remaining = Math.max(0, world.timeLimit - world.raceTime);
     const m = Math.floor(remaining / 60), s = Math.floor(remaining % 60);
     this.el('clock').textContent = `${m}:${String(s).padStart(2, '0')}`;
-    const alive = cars.filter((c) => c.alive).length;
-    this.el('alive').textContent = `${alive} still running`;
     this.el('lap').textContent = `Lap ${Math.min(world.leaderLaps + 1, world.laps)} of ${world.laps}`;
 
     const c = cars[focusId];
@@ -197,7 +193,7 @@ export class Hud {
       : '';
   }
 
-  // Running order column: the leader's lap, then everyone's distance behind.
+  // The results list: the leader's lap, then everyone's distance behind.
   gapText(car, leader, rank, lapLength, laps) {
     if (!car.alive) return 'OUT';
     if (rank === 0) return `L${Math.min(car.laps + 1, laps)}`;

@@ -19,7 +19,7 @@ npm test          # physics and network tests
 
 ## Watching
 
-The Grudge Board is the running order. Click a name to follow that bot. Red yarn runs from each bot to whoever its network is leaning on right now, and the red bar is its rage neuron. Keys 1 to 6 pick a camera (chase, grille, trackside, drone, tower, heli), A hands it back to the director, `[` and `]` step between cars, Space pauses, M mutes.
+The Grudge Board is the running order. Click a name to follow that bot. Red yarn runs from each bot to whoever its network is leaning on right now, and the face at the end of its row shows how angry its rage neuron is. Keys 1 to 6 pick a camera (chase, grille, trackside, drone, tower, heli), A hands it back to the director, `[` and `]` step between cars, Space pauses, M mutes.
 
 ## Rules
 

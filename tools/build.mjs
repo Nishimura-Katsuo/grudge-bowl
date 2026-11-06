@@ -32,7 +32,7 @@ const result = await build({
   target: 'es2022',
   write: false,
   outdir: 'out',
-  loader: { '.woff2': 'dataurl', '.woff': 'empty' },
+  loader: { '.woff2': 'dataurl', '.woff': 'empty', '.png': 'dataurl' },
   logLevel: 'warning',
   plugins: [brainPlugin],
 });
